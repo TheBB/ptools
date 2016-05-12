@@ -14,8 +14,9 @@ class ImageView(QLabel):
 
         self.orig_pixmap = None
 
-    def load(self, filename):
-        self.orig_pixmap = QPixmap(filename)
+    def load(self, pic):
+        self.orig_pixmap = QPixmap(pic.filename)
+        self.resize()
 
     def resize(self):
         pixmap = self.orig_pixmap.scaled(self.width(), self.height(), 1, 1)
@@ -27,22 +28,25 @@ class ImageView(QLabel):
 
 class MainWindow(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, db):
         super(MainWindow, self).__init__()
         self.setWindowTitle('PTools')
+        self.db = db
 
         image = ImageView()
-        image.load(sys.argv[1])
+        image.load(db.random_pic())
         self.setCentralWidget(image)
         self.image = image
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Q:
             self.close()
+        elif event.key() == Qt.Key_Space:
+            self.image.load(self.db.random_pic())
 
 
-def run_gui():
+def run_gui(db):
     app = QApplication(sys.argv)
-    win = MainWindow()
+    win = MainWindow(db)
     win.show()
     return app.exec_()
