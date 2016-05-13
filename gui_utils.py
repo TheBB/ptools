@@ -19,7 +19,11 @@ class ImageView(QLabel):
         self.orig_pixmap = None
 
     def load(self, pic):
-        self.orig_pixmap = QPixmap(pic.filename)
+        if isinstance(pic, str):
+            fn = pic
+        else:
+            fn = pic.filename
+        self.orig_pixmap = QPixmap(fn)
         self.resize()
 
     def resize(self):
@@ -28,6 +32,26 @@ class ImageView(QLabel):
 
     def resizeEvent(self, event):
         self.resize()
+
+
+class ButtonsWidget(QWidget):
+
+    def __init__(self, target):
+        super(ButtonsWidget, self).__init__()
+
+        cancel_btn = QPushButton('Cancel')
+        cancel_btn.clicked.connect(target.reject)
+        cancel_btn.setDefault(False)
+        cancel_btn.setAutoDefault(False)
+
+        ok_btn = QPushButton('OK')
+        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(target.accept)
+
+        self.setLayout(QHBoxLayout())
+        self.layout().addWidget(cancel_btn)
+        self.layout().addWidget(ok_btn)
+
 
 
 class PickerWidget(QWidget):
@@ -88,36 +112,23 @@ class PickerDialog(QDialog):
 
     def __init__(self, db):
         super(PickerDialog, self).__init__()
+        self.setWindowTitle('Pickers')
+        self.db = db
+        self.widgets = [PickerWidget(p) for p in db.pickers]
 
         layout = QVBoxLayout()
         self.setLayout(layout)
 
-        self.setWindowTitle('Pickers')
-        self.db = db
-        self.widgets = [PickerWidget(p) for p in db.pickers]
         for w in self.widgets:
             layout.addWidget(w)
 
-        cancel_btn = QPushButton('Cancel')
-        cancel_btn.clicked.connect(self.reject)
-        cancel_btn.setDefault(False)
-        cancel_btn.setAutoDefault(False)
-
-        ok_btn = QPushButton('OK')
-        ok_btn.setDefault(True)
-        ok_btn.clicked.connect(self.accept)
-
-        btns = QWidget()
-        btns.setLayout(QHBoxLayout())
-        btns.layout().addWidget(cancel_btn)
-        btns.layout().addWidget(ok_btn)
-        layout.addWidget(btns)
+        layout.addWidget(ButtonsWidget(self))
 
         self.setFixedSize(self.sizeHint())
         for w in self.widgets:
             w.check(False)
 
-    def make_picker(self):
+    def get_picker(self):
         union = UnionPicker()
         for w in self.widgets:
             if w.checked and w.frequency:
@@ -125,3 +136,23 @@ class PickerDialog(QDialog):
         if not union.pickers:
             return self.db.picker()
         return union
+
+
+class FlagsDialog(QDialog):
+
+    def __init__(self, db):
+        super(FlagsDialog, self).__init__()
+        self.setWindowTitle('Flags')
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        layout.addWidget(ButtonsWidget(self))
+
+        # self.db = db
+        # self.widgets = [PickerWidget(p) for p in db.pickers]
+        # for w in self.widgets:
+        #     layout.addWidget(w)
+
+    def get_flags(self):
+        return {'lel': True}

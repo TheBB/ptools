@@ -1,9 +1,9 @@
 import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow
 
-from gui_utils import ImageView, PickerDialog
+from gui_utils import ImageView, FlagsDialog, PickerDialog
 from programs import Program
 
 
@@ -19,6 +19,7 @@ class MainWindow(QMainWindow):
         self.image = image
 
         self.picker_dialog = PickerDialog(self.db)
+        self.flags_dialog = FlagsDialog(self.db)
 
         self.programs = []
         Program(self)
@@ -31,9 +32,13 @@ class MainWindow(QMainWindow):
         self.programs.pop()
         self.programs[-1].make_current(self)
 
-    def make_picker(self):
+    def get_picker(self):
         if self.picker_dialog.exec_() == QDialog.Accepted:
-            return self.picker_dialog.make_picker()
+            return self.picker_dialog.get_picker()
+
+    def get_flags(self):
+        if self.flags_dialog.exec_() == QDialog.Accepted:
+            return self.flags_dialog.get_flags()
 
     def show_image(self, pic):
         self.image.load(pic)

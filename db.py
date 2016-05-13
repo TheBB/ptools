@@ -1,5 +1,7 @@
-from os.path import abspath, expanduser, join
+from os import listdir
+from os.path import abspath, basename, expanduser, isfile, join
 from random import choice, uniform
+from subprocess import run
 
 from sqlalchemy import create_engine, Boolean, Column, Integer, MetaData, String, Table
 from sqlalchemy.orm import mapper, create_session
@@ -56,6 +58,8 @@ class DB:
             columns.append(Column(c, type_, nullable=False, default=default))
             replacements.append((c, 'Picture.{}'.format(c)))
 
+        self.staging = abspath(expanduser(config['staging']))
+
         Picture.root = abspath(expanduser(config['location']))
         path = abspath(join(Picture.root, 'plib.db'))
         engine = create_engine('sqlite:///{}'.format(path))
@@ -78,7 +82,17 @@ class DB:
     def picker(self, name='All', *filters):
         return ListPicker(name, self.query().filter(*filters))
 
-    def random_pic(self):
-        pics = list(self.query())
-        pic = choice(pics)
-        return pic
+    def synchronize(self):
+        existing_db = {p.filename for p in self.query()}
+        existing_hd = {join(Picture.root, fn) for fn in listdir(Picture.root) if fn != 'plib.db'}
+        existing_hd = {fn for fn in existing_hd if isfile(fn)}
+
+        delete_ids = {int(basename(f).split('.')[-2]) for f in existing_db - existing_hd}
+        if delete_ids:
+            self.query().filter(Picture.id.in_(delete_ids)).delete(synchronize_session='fetch')
+
+        move_files = existing_hd - existing_db
+        for fn in move_files:
+            run(['mv', fn, join(self.staging, basename(fn))])
+
+        return [join(self.staging, fn) for fn in listdir(self.staging)]
