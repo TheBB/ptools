@@ -12,6 +12,15 @@ class Picture:
         return join(self.root, '{idx:0>8}.{ext}'.format(idx=self.id, ext=self.extension))
 
 
+class ListPicker:
+
+    def __init__(self, pics):
+        self.pics = pics
+
+    def get(self):
+        return choice(self.pics)
+
+
 class DB:
 
     def __init__(self, config):
@@ -35,7 +44,11 @@ class DB:
     def query(self):
         return self.session.query(Picture)
 
+    def picker(self, *filters):
+        return ListPicker(list(self.query().filter(*filters)))
+
     def random_pic(self):
         pics = list(self.query())
         pic = choice(pics)
         return pic
+

@@ -32,9 +32,10 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.setWindowTitle('PTools')
         self.db = db
+        self.picker = db.picker()
 
         image = ImageView()
-        image.load(db.random_pic())
+        image.load(self.picker.get())
         self.setCentralWidget(image)
         self.image = image
 
@@ -42,7 +43,7 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key_Q:
             self.close()
         elif event.key() == Qt.Key_Space:
-            self.image.load(self.db.random_pic())
+            self.image.load(self.picker.get())
 
 
 def run_gui(db):
