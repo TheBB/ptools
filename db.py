@@ -1,8 +1,11 @@
 from os.path import abspath, expanduser, join
-from random import choice
+from random import choice, uniform
 
 from sqlalchemy import create_engine, Boolean, Column, Integer, MetaData, String, Table
 from sqlalchemy.orm import mapper, create_session
+from sqlalchemy.sql import func
+
+from utils import replace_all
 
 
 class Picture:
@@ -14,11 +17,31 @@ class Picture:
 
 class ListPicker:
 
-    def __init__(self, pics):
-        self.pics = pics
+    def __init__(self, query):
+        self.query = query
 
     def get(self):
-        return choice(self.pics)
+        return self.query.order_by(func.random()).first()
+
+
+class UnionPicker:
+
+    def __init__(self):
+        self.pickers = []
+
+    def add(self, picker, frequency=1.0):
+        self.pickers.append((picker, float(frequency)))
+
+    def get(self):
+        max = sum(f for _, f in self.pickers)
+        r = uniform(0.0, max)
+
+        for p, f in self.pickers:
+            if r <= 0.0:
+                break
+            r -= f
+
+        return p.get()
 
 
 class DB:
@@ -26,10 +49,12 @@ class DB:
     def __init__(self, config):
         columns = [Column('id', Integer, primary_key=True),
                    Column('extension', String, nullable=False)]
+        replacements = []
         for c in config['columns']:
             type_ = Integer if c.startswith('num_') else Boolean
             default = {Integer: 0, Boolean: False}[type_]
             columns.append(Column(c, type_, nullable=False, default=default))
+            replacements.append((c, 'Picture.{}'.format(c)))
 
         Picture.root = abspath(expanduser(config['location']))
         path = abspath(join(Picture.root, 'plib.db'))
@@ -41,11 +66,16 @@ class DB:
 
         self.session = create_session(bind=engine, autocommit=False, autoflush=True)
 
+        self.pickers = {'All': self.picker()}
+        for p in config['pickers']:
+            filters = [eval(replace_all(s, replacements)) for s in p['filters']]
+            self.pickers[p['name']] = self.picker(*filters)
+
     def query(self):
         return self.session.query(Picture)
 
     def picker(self, *filters):
-        return ListPicker(list(self.query().filter(*filters)))
+        return ListPicker(self.query().filter(*filters))
 
     def random_pic(self):
         pics = list(self.query())

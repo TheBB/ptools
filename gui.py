@@ -1,7 +1,12 @@
 import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow
+from PyQt5.QtWidgets import (
+    QApplication, QCheckBox, QDialog, QHBoxLayout, QLabel, QLayout, QMainWindow,
+    QPushButton, QSizePolicy, QSlider, QVBoxLayout, QWidget
+)
+
+from db import UnionPicker
 
 
 class ImageView(QLabel):
@@ -26,22 +31,126 @@ class ImageView(QLabel):
         self.resize()
 
 
+class PickerWidget(QWidget):
+
+    def __init__(self, name, picker):
+        super(PickerWidget, self).__init__()
+
+        self.picker = picker
+
+        layout = QHBoxLayout()
+        self.setLayout(layout)
+
+        checkbox = QCheckBox(name)
+        checkbox.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
+        checkbox.setMinimumWidth(100)
+        checkbox.stateChanged.connect(self.check)
+        layout.addWidget(checkbox)
+        self.checkbox = checkbox
+
+        slider = QSlider(Qt.Horizontal)
+        slider.setMinimumWidth(300)
+        slider.setMinimum(0)
+        slider.setMaximum(100)
+        slider.setValue(100)
+        slider.valueChanged.connect(self.slide)
+        layout.addWidget(slider)
+        self.slider = slider
+
+        label = QLabel('0%')
+        label.setMinimumWidth(40)
+        label.setAlignment(Qt.AlignRight)
+        layout.addWidget(label)
+        self.label = label
+
+        layout.setSizeConstraint(QLayout.SetFixedSize)
+
+    def check(self, state):
+        self.slider.setVisible(state == Qt.Checked)
+        self.label.setVisible(state == Qt.Checked)
+        if state == Qt.Checked:
+            self.slide(self.slider.value())
+        else:
+            self.slide(0)
+
+    def slide(self, value):
+        self.label.setText('{}%'.format(value))
+
+    @property
+    def checked(self):
+        return self.checkbox.checkState() == Qt.Checked
+
+    @property
+    def frequency(self):
+        return self.slider.value()
+
+
+class PickerDialog(QDialog):
+
+    def __init__(self, db):
+        super(PickerDialog, self).__init__()
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        self.db = db
+        self.widgets = [PickerWidget(name, picker) for name, picker in db.pickers.items()]
+        for w in self.widgets:
+            layout.addWidget(w)
+
+        cancel_btn = QPushButton('Cancel')
+        cancel_btn.clicked.connect(self.reject)
+        cancel_btn.setDefault(False)
+        cancel_btn.setAutoDefault(False)
+
+        ok_btn = QPushButton('OK')
+        ok_btn.setDefault(True)
+        ok_btn.clicked.connect(self.accept)
+
+        btns = QWidget()
+        btns.setLayout(QHBoxLayout())
+        btns.layout().addWidget(cancel_btn)
+        btns.layout().addWidget(ok_btn)
+        layout.addWidget(btns)
+
+        self.setFixedSize(self.sizeHint())
+        for w in self.widgets:
+            w.check(False)
+
+    def make_picker(self):
+        union = UnionPicker()
+        for w in self.widgets:
+            if w.checked and w.frequency:
+                union.add(w.picker, w.frequency)
+        if not union.pickers:
+            return self.db.picker()
+        return union
+
+
 class MainWindow(QMainWindow):
 
     def __init__(self, db):
         super(MainWindow, self).__init__()
+
         self.setWindowTitle('PTools')
         self.db = db
-        self.picker = db.picker()
+        self.picker = db.pickers['All']
 
         image = ImageView()
         image.load(self.picker.get())
         self.setCentralWidget(image)
         self.image = image
 
+        self.picker_dialog = PickerDialog(self.db)
+
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Q:
+        if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
             self.close()
+        elif event.key() == Qt.Key_P:
+            ret = self.picker_dialog.exec_()
+            if ret == QDialog.Accepted:
+                self.picker = self.picker_dialog.make_picker()
+            self.image.load(self.picker.get())
         elif event.key() == Qt.Key_Space:
             self.image.load(self.picker.get())
 
