@@ -48,5 +48,5 @@ class MainWindow(QMainWindow):
 def run_gui(db):
     app = QApplication(sys.argv)
     win = MainWindow(db)
-    win.show()
+    win.showMaximized()
     return app.exec_()
