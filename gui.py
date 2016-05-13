@@ -150,7 +150,7 @@ class MainWindow(QMainWindow):
             ret = self.picker_dialog.exec_()
             if ret == QDialog.Accepted:
                 self.picker = self.picker_dialog.make_picker()
-            self.image.load(self.picker.get())
+                self.image.load(self.picker.get())
         elif event.key() == Qt.Key_Space:
             self.image.load(self.picker.get())
 

@@ -70,8 +70,9 @@ class DB:
 
         self.pickers = [self.picker()]
         for p in config['pickers']:
-            filters = [eval(replace_all(s, replacements)) for s in p['filters']]
-            self.pickers.append(self.picker(p['name'], *filters))
+            name, filters = next(iter(p.items()))
+            filters = [eval(replace_all(s, replacements)) for s in filters]
+            self.pickers.append(self.picker(name, *filters))
 
     def query(self):
         return self.session.query(Picture)
@@ -83,4 +84,3 @@ class DB:
         pics = list(self.query())
         pic = choice(pics)
         return pic
-
