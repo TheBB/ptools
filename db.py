@@ -5,8 +5,6 @@ from sqlalchemy import create_engine, Boolean, Column, Integer, MetaData, String
 from sqlalchemy.orm import mapper, create_session
 from sqlalchemy.sql import func
 
-from utils import replace_all
-
 
 class Picture:
 
@@ -71,7 +69,7 @@ class DB:
         self.pickers = [self.picker()]
         for p in config['pickers']:
             name, filters = next(iter(p.items()))
-            filters = [eval(replace_all(s, replacements)) for s in filters]
+            filters = [eval(s, None, Picture.__dict__) for s in filters]
             self.pickers.append(self.picker(name, *filters))
 
     def query(self):
