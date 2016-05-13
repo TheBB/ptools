@@ -17,8 +17,9 @@ class Picture:
 
 class ListPicker:
 
-    def __init__(self, query):
+    def __init__(self, name, query):
         self.query = query
+        self.name = name
 
     def get(self):
         return self.query.order_by(func.random()).first()
@@ -28,6 +29,7 @@ class UnionPicker:
 
     def __init__(self):
         self.pickers = []
+        self.name = 'Union'
 
     def add(self, picker, frequency=1.0):
         self.pickers.append((picker, float(frequency)))
@@ -66,16 +68,16 @@ class DB:
 
         self.session = create_session(bind=engine, autocommit=False, autoflush=True)
 
-        self.pickers = {'All': self.picker()}
+        self.pickers = [self.picker()]
         for p in config['pickers']:
             filters = [eval(replace_all(s, replacements)) for s in p['filters']]
-            self.pickers[p['name']] = self.picker(*filters)
+            self.pickers.append(self.picker(p['name'], *filters))
 
     def query(self):
         return self.session.query(Picture)
 
-    def picker(self, *filters):
-        return ListPicker(self.query().filter(*filters))
+    def picker(self, name='All', *filters):
+        return ListPicker(name, self.query().filter(*filters))
 
     def random_pic(self):
         pics = list(self.query())

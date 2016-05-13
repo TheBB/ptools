@@ -33,7 +33,7 @@ class ImageView(QLabel):
 
 class PickerWidget(QWidget):
 
-    def __init__(self, name, picker):
+    def __init__(self, picker):
         super(PickerWidget, self).__init__()
 
         self.picker = picker
@@ -41,7 +41,7 @@ class PickerWidget(QWidget):
         layout = QHBoxLayout()
         self.setLayout(layout)
 
-        checkbox = QCheckBox(name)
+        checkbox = QCheckBox(picker.name)
         checkbox.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
         checkbox.setMinimumWidth(100)
         checkbox.stateChanged.connect(self.check)
@@ -94,7 +94,7 @@ class PickerDialog(QDialog):
         self.setLayout(layout)
 
         self.db = db
-        self.widgets = [PickerWidget(name, picker) for name, picker in db.pickers.items()]
+        self.widgets = [PickerWidget(p) for p in db.pickers]
         for w in self.widgets:
             layout.addWidget(w)
 
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle('PTools')
         self.db = db
-        self.picker = db.pickers['All']
+        self.picker = db.pickers[0]
 
         image = ImageView()
         image.load(self.picker.get())
