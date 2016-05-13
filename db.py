@@ -39,9 +39,9 @@ class UnionPicker:
         r = uniform(0.0, max)
 
         for p, f in self.pickers:
+            r -= f
             if r <= 0.0:
                 break
-            r -= f
 
         return p.get()
 
