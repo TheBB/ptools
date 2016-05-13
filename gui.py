@@ -89,14 +89,14 @@ class PickerDialog(QDialog):
 
     def __init__(self, db):
         super(PickerDialog, self).__init__()
-
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-
+        self.setWindowTitle('Pickers')
         self.db = db
         self.widgets = [PickerWidget(p) for p in db.pickers]
         for w in self.widgets:
             layout.addWidget(w)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
 
         cancel_btn = QPushButton('Cancel')
         cancel_btn.clicked.connect(self.reject)
@@ -131,7 +131,6 @@ class MainWindow(QMainWindow):
 
     def __init__(self, db):
         super(MainWindow, self).__init__()
-
         self.setWindowTitle('PTools')
         self.db = db
         self.picker = db.pickers[0]
