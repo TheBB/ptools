@@ -1,9 +1,11 @@
 import sys
+from sqlalchemy import Boolean, Integer
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (
-    QCheckBox, QDialog, QHBoxLayout, QLabel, QLayout, QMainWindow, QPushButton,
-    QSizePolicy, QSlider, QVBoxLayout, QWidget
+    QCheckBox, QDialog, QGridLayout, QHBoxLayout, QLabel, QLayout, QMainWindow,
+    QPushButton, QSizePolicy, QSlider, QSpinBox, QVBoxLayout, QWidget
 )
 
 from db import UnionPicker
@@ -28,7 +30,7 @@ class ImageView(QLabel):
 
     def resize(self):
         pixmap = self.orig_pixmap.scaled(self.width(), self.height(), 1, 1)
-        self.setPixmap(pixmap)
+        # self.setPixmap(pixmap)
 
     def resizeEvent(self, event):
         self.resize()
@@ -147,12 +149,44 @@ class FlagsDialog(QDialog):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        grid = QGridLayout()
+        layout.addLayout(grid)
+
+        self.assignment, self.defaults = {}, {}
+        for i, c in enumerate(db.custom_columns, start=1):
+            if isinstance(c.type, Boolean):
+                widget = QCheckBox(c.title)
+                self.defaults[widget] = Qt.Checked if c.default.arg else Qt.Unchecked
+                grid.addWidget(widget, i, 1, 1, 2)
+            elif isinstance(c.type, Integer):
+                label = QLabel(c.title)
+                widget = QSpinBox()
+                self.defaults[widget] = c.default.arg
+                grid.addWidget(label, i, 1)
+                grid.addWidget(widget, i, 2)
+            self.assignment[c.key] = widget
+
         layout.addWidget(ButtonsWidget(self))
 
-        # self.db = db
-        # self.widgets = [PickerWidget(p) for p in db.pickers]
-        # for w in self.widgets:
-        #     layout.addWidget(w)
+        self.set_defaults()
+
+    def exec_(self):
+        self.set_defaults()
+        return super(FlagsDialog, self).exec_()
+
+    def set_defaults(self):
+        for w, v in self.defaults.items():
+            if isinstance(w, QCheckBox):
+                w.setCheckState(Qt.Checked if v else Qt.Unchecked)
+            elif isinstance(w, QSpinBox):
+                w.setValue(v)
 
     def get_flags(self):
-        return {'lel': True}
+        ret = {}
+        for k, w in self.assignment.items():
+            if isinstance(w, QCheckBox):
+                ret[k] = w.checkState() == Qt.Checked
+            elif isinstance(w, QSpinBox):
+                ret[k] = w.value()
+
+        return ret

@@ -51,13 +51,21 @@ class DB:
     def __init__(self, config):
         columns = [Column('id', Integer, primary_key=True),
                    Column('extension', String, nullable=False)]
-        replacements = []
         for c in config['columns']:
-            type_ = Integer if c.startswith('num_') else Boolean
+            if isinstance(c, str):
+                type_ = Integer if c.startswith('num_') else Boolean
+                name = c.replace('_', ' ').title()
+                key = c
+            else:
+                type_ = {'int': Integer, 'bool': Boolean}[c['type']]
+                name = c['title']
+                key = c['key']
             default = {Integer: 0, Boolean: False}[type_]
-            columns.append(Column(c, type_, nullable=False, default=default))
-            replacements.append((c, 'Picture.{}'.format(c)))
+            col = Column(key, type_=type_, nullable=False, default=default)
+            col.title = name
+            columns.append(col)
 
+        self.custom_columns = columns[2:]
         self.staging = abspath(expanduser(config['staging']))
 
         Picture.root = abspath(expanduser(config['location']))

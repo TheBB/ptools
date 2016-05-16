@@ -1,3 +1,5 @@
+from subprocess import run
+
 from PyQt5.QtCore import Qt
 
 from db import Picture
@@ -31,6 +33,7 @@ class SyncProgram:
     def __init__(self, main):
         self.name = 'Synchronize'
         self.staged = main.db.synchronize()
+        self.moves = {}
         main.register(self)
 
     def next(self, main):
@@ -38,6 +41,12 @@ class SyncProgram:
             fn = self.staged[-1]
             main.show_image(self.staged[-1])
         else:
+            main.db.session.add_all(self.moves.values())
+            main.db.session.commit()
+
+            for fn, pic in self.moves.items():
+                run(['mv', fn, join(self.staging, pic.filename)])
+
             main.unregister()
 
     def make_current(self, main):
@@ -47,5 +56,13 @@ class SyncProgram:
         flags = main.get_flags()
         if flags:
             fn = self.staged.pop()
-            print(fn, flags)
+            extension = fn.split('.')[-1].lower()
+            if extension == 'jpeg':
+                extension = 'jpg'
+
+            pic = Picture(extension=extension)
+            for k, v in flags.items():
+                setattr(pic, k, v)
+
+            self.moves[fn] = pic
             self.next(main)
