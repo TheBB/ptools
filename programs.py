@@ -223,7 +223,14 @@ class CleanupProgram:
 
     def key(self, main, event):
         if event.key() == Qt.Key_C:
-            main.db.put()
+            ret = main.db.put()
+            data = {
+                'new_rem': int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n')),
+                'del_rem': int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n')),
+            }
+            main.show_message("""New on remote: {new_rem}<br>
+                                 Deleted remotely: {del_rem}""".format(**data),
+                              align='left')
             main.unregister()
             return
         if event.key() == Qt.Key_E:
