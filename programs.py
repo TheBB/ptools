@@ -82,30 +82,37 @@ class BestOfGame(Program):
 
         self.pts = {True: [0, 0, 0], False: [0, 0, 0]}
         self.max_pts = [5, 5, main.db.status.bestof_width]
+        self.max_leads = {True: 0, False: 0}
         self.current = choice([True, False])
         self.prev_winner = None
         self.speed = 0.7
         self.bias = 0.0
+        self.done = False
 
         main.show_message( 'Best of: ' + ', '.join(str(s) for s in self.max_pts))
 
         main.register(self)
 
     def add_pts(self, winner, npts):
-        loser = self.pts[not winner]
-        winner = self.pts[winner]
-        while npts > 0 and winner[-1] < self.max_pts[-1]:
+        l_pts = self.pts[not winner]
+        w_pts = self.pts[winner]
+        while npts > 0 and w_pts[-1] < self.max_pts[-1]:
             i = 0
-            winner[i] += 1
-            while winner[i] == self.max_pts[i]:
+            w_pts[i] += 1
+            while w_pts[i] == self.max_pts[i]:
                 if i == len(self.max_pts) - 1:
                     break
-                winner[i+1] += 1
-                winner[i] = loser[i] = 0
+                w_pts[i+1] += 1
+                w_pts[i] = l_pts[i] = 0
                 i += 1
             npts -= 1
 
+        self.max_leads[winner] = max(self.max_leads[winner], w_pts[-1] - l_pts[-1])
+
     def next(self, main):
+        if self.done:
+            main.unregister()
+
         p = lambda b: max(min((1.020**b) / (1.020**b + 1), 0.93), 0.07)
         conv = lambda p: self.speed * p
         threshold = conv(p(self.bias) if self.current else 1 - p(self.bias))
@@ -115,33 +122,45 @@ class BestOfGame(Program):
             pic = self.picker.get()
         main.show_image(pic)
 
-        if win:
-            npts = main.db.status.bestof_value(pic)
-            self.add_pts(self.current, npts)
-
-            if self.prev_winner != self.current:
-                self.bias = 0.0
-            else:
-                self.bias += (2 * int(self.current) - 1) * min(npts, 15)
-
-            msg = ['{} points for {}'.format(npts, 'us' if self.current else 'you')]
-            for a, b in zip(self.pts[True], self.pts[False]):
-                msg.append('{} – {}'.format(a, b))
-
-            p_t, p_f = conv(p(self.bias)), conv(1 - p(self.bias))
-            denom = p_t + p_f - p_t * p_f
-            if self.current:
-                p_t /= denom
-            else:
-                p_t = 1 - p_f / denom
-            p_f = 1 - p_t
-
-            msg.append('{:.2f}% – {:.2f}%'.format(p_t*100, p_f*100))
-            MessageProgram(main, msg)
-
-            self.prev_winner = self.current
-        else:
+        if not win:
             self.current = not self.current
+            return
+
+        npts = main.db.status.bestof_value(pic)
+        self.add_pts(self.current, npts)
+        sign = 2 * int(self.current) - 1
+
+        if self.prev_winner != self.current:
+            self.bias = 0.0
+        else:
+            self.bias += (2 * int(self.current) - 1) * min(npts, 15)
+
+        if self.pts[self.current][-1] == self.max_pts[-1]:
+            winner = 'We' if self.current else 'You'
+            total = self.max_pts[-1] + self.max_leads[self.current]
+            total += self.max_pts[-1] - self.pts[not self.current][-1]
+            msg = '{} win with {}'.format(winner, total)
+            MessageProgram(main, msg)
+            self.done = True
+            main.db.status.add_pts(sign * total)
+            return
+
+        msg = ['{} points for {}'.format(npts, 'us' if self.current else 'you')]
+        for a, b in zip(self.pts[True], self.pts[False]):
+            msg.append('{} – {}'.format(a, b))
+
+        p_t, p_f = conv(p(self.bias)), conv(1 - p(self.bias))
+        denom = p_t + p_f - p_t * p_f
+        if self.current:
+            p_t /= denom
+        else:
+            p_t = 1 - p_f / denom
+        p_f = 1 - p_t
+
+        msg.append('{:.2f}% – {:.2f}%'.format(p_t*100, p_f*100))
+        MessageProgram(main, msg)
+
+        self.prev_winner = self.current
 
     def make_current(self, main):
         self.next(main)

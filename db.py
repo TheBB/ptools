@@ -84,6 +84,10 @@ class Status:
             return self.pickers['minus']
         return self.pickers['standard']
 
+    def add_pts(self, pts):
+        self.data['points'] += pts
+        self.put()
+
 
 class DB:
 
