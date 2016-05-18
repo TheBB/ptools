@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox
 
-from gui_utils import ImageView, FlagsDialog, PickerDialog
+from gui_utils import ImageView, FlagsDialog, MessageDialog, PickerDialog
 from programs import Program
 
 
@@ -44,12 +44,10 @@ class MainWindow(QMainWindow):
         self.image.load(pic)
 
     def show_message(self, msg):
-        box = QMessageBox()
         if isinstance(msg, str):
             msg = [msg]
-        box.setText(''.join('<p align="center">' + m + '</p>' for m in msg))
-        box.setWindowTitle(self.windowTitle())
-        box.exec_()
+        text = ''.join('<p align="center">' + m + '</p>' for m in msg)
+        MessageDialog(text)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:

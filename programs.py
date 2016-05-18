@@ -89,12 +89,12 @@ class BestOfGame(Program):
         main.register(self)
 
     def add_pts(self, winner, npts):
+        loser = self.pts[not winner]
         winner = self.pts[winner]
-        loser = self.pts[loser]
-        while npts > 0 and target[-1] < self.max_pts[-1]:
+        while npts > 0 and winner[-1] < self.max_pts[-1]:
             i = 0
             winner[i] += 1
-            while target[i] > self.max_pts[i] and target[-1] < self.max_pts[-1]:
+            while winner[i] >= self.max_pts[i] and winner[-1] < self.max_pts[-1]:
                 winner[i] = loser[i] = 0
                 winner[i+1] += 1
                 i += 1

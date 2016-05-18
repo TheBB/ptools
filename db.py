@@ -54,7 +54,7 @@ class Status:
         self.local = abspath(expanduser(config['local']))
         self.remote = config['remote']
 
-        # run(['rsync', '-av', self.remote, self.local])
+        run(['rsync', '-av', self.remote, self.local])
         with open(self.local, 'r') as f:
             self.data = load(f)
 

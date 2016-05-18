@@ -2,7 +2,7 @@ import sys
 from sqlalchemy import Boolean, Integer
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import (
     QCheckBox, QDialog, QGridLayout, QHBoxLayout, QLabel, QLayout, QMainWindow,
     QPushButton, QSizePolicy, QSlider, QSpinBox, QVBoxLayout, QWidget
@@ -108,6 +108,38 @@ class PickerWidget(QWidget):
     @property
     def frequency(self):
         return self.slider.value()
+
+
+class MessageDialog(QDialog):
+
+    def __init__(self, text):
+        super(MessageDialog, self).__init__()
+        self.setWindowTitle('PTools')
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        label = QLabel()
+        label.setStyleSheet('''QLabel {
+            background-color: rgba(0, 0, 0, 200);
+            color: rgb(255, 255, 255);
+        }''')
+        label.setText(text)
+        label.setMargin(20)
+
+        font = QFont()
+        font.setPixelSize(32)
+        font.setWeight(QFont.Bold)
+        label.setFont(font)
+
+        layout.addWidget(label)
+
+        self.exec_()
+
+    def keyPressEvent(self, event):
+        self.accept()
 
 
 class PickerDialog(QDialog):
