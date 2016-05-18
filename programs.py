@@ -14,8 +14,7 @@ class Program:
         main.register(self)
 
     def make_current(self, main):
-        if not self.picker:
-            self.picker = main.db.pickers[0]
+        self.picker = main.db.status.picker()
         main.show_image(self.picker.get())
         main.setWindowTitle(self.name)
 

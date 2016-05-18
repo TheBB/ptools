@@ -2,6 +2,7 @@ from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
 from random import choice, uniform
 from subprocess import run
+from yaml import dump, load
 
 from sqlalchemy import create_engine, Boolean, Column, Integer, MetaData, String, Table
 from sqlalchemy.orm import mapper, create_session
@@ -47,6 +48,32 @@ class UnionPicker:
         return p.get()
 
 
+class Status:
+
+    def __init__(self, db, config):
+        self.local = abspath(expanduser(config['local']))
+        self.remote = config['remote']
+
+        run(['rsync', '-av', self.remote, self.local])
+        with open(self.local, 'r') as f:
+            self.data = load(f)
+
+        self.pickers = {name: db.picker_from_filters(name, filters)
+                        for name, filters in config['pickers'].items()}
+
+    def put(self):
+        with open(self.local, 'w') as f:
+            dump(self.data, f, default_flow_style=False)
+        run(['rsync', '-av', self.local, self.remote])
+
+    def picker(self):
+        if self.data['points'] > 0:
+            return self.pickers['plus']
+        elif self.data['points'] < 0:
+            return self.pickers['minus']
+        return self.pickers['standard']
+
+
 class DB:
 
     def __init__(self, config):
@@ -78,13 +105,13 @@ class DB:
         metadata.create_all()
         mapper(Picture, table)
 
-        self.update_session()
-
         self.pickers = [self.picker()]
         for p in config['pickers']:
             name, filters = next(iter(p.items()))
-            filters = [eval(s, None, Picture.__dict__) for s in filters]
-            self.pickers.append(self.picker(name, *filters))
+            self.pickers.append(self.picker_from_filters(name, filters))
+
+        self.status = Status(self, config['status'])
+        self.update_session()
 
     def update_session(self):
         if hasattr(self, 'session'):
@@ -93,6 +120,10 @@ class DB:
 
     def query(self):
         return self.session.query(Picture)
+
+    def picker_from_filters(self, name='All', filters=[]):
+        filters = [eval(s, None, Picture.__dict__) for s in filters]
+        return self.picker(name, *filters)
 
     def picker(self, name='All', *filters):
         return ListPicker(name, self, *filters)
