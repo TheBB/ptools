@@ -41,6 +41,7 @@ class MainWindow(QMainWindow):
             return self.flags_dialog.get_flags()
 
     def show_image(self, pic):
+        self.current_pic = pic
         self.image.load(pic)
 
     def show_message(self, msg, align='center'):

@@ -162,10 +162,15 @@ class DB:
         return ret.stdout.decode()
 
     def put(self):
+        self.session.commit()
         ret = run(['rsync', '-a', '--info=stats2', '--delete',
                    Picture.root + sep, self.remote], stdout=PIPE)
+        self.update_session()
         return ret.stdout.decode()
 
+    def delete(self, pic):
+        run(['rm', pic.filename])
+        self.session.delete(pic)
 
     def sync_local(self):
         existing_db = {p.filename for p in self.query()}

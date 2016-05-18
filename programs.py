@@ -26,6 +26,8 @@ class Program:
             main.show_image(self.picker.get())
         elif event.key() == Qt.Key_S:
             SyncProgram(main)
+        elif event.key() == Qt.Key_D:
+            CleanupProgram(main, self.picker)
         elif event.key() == Qt.Key_T:
             StatusProgram(main)
         elif event.key() == Qt.Key_B:
@@ -202,6 +204,35 @@ class BestOfGame(Program):
         self.next(main)
 
     def key(self, main, event):
+        self.next(main)
+
+
+class CleanupProgram:
+
+    def __init__(self, main, picker):
+        self.name = 'Cleanup'
+        self.picker = picker
+        main.register(self)
+
+    def next(self, main):
+        self.pic = self.picker.get()
+        main.show_image(self.pic)
+
+    def make_current(self, main):
+        self.next(main)
+
+    def key(self, main, event):
+        if event.key() == Qt.Key_C:
+            main.db.put()
+            main.unregister()
+            return
+        if event.key() == Qt.Key_E:
+            main.db.update_session()
+            main.unregister()
+            return
+
+        if event.key() == Qt.Key_D:
+            main.db.delete(self.pic)
         self.next(main)
 
 
