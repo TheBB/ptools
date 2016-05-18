@@ -1,4 +1,4 @@
-from os import listdir
+from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
 from random import choice, uniform
 from subprocess import run
@@ -17,12 +17,13 @@ class Picture:
 
 class ListPicker:
 
-    def __init__(self, name, query):
-        self.query = query
+    def __init__(self, name, db, *filters):
+        self.filters = filters
+        self.db = db
         self.name = name
 
     def get(self):
-        return self.query.order_by(func.random()).first()
+        return self.db.query().filter(*self.filters).order_by(func.random()).first()
 
 
 class UnionPicker:
@@ -64,19 +65,20 @@ class DB:
             col = Column(key, type_=type_, nullable=False, default=default)
             col.title = name
             columns.append(col)
-
         self.custom_columns = columns[2:]
-        self.staging = abspath(expanduser(config['staging']))
 
-        Picture.root = abspath(expanduser(config['location']))
+        self.staging = abspath(expanduser(config['pics']['staging']))
+        self.remote = config['pics']['remote']
+        Picture.root = abspath(expanduser(config['pics']['local']))
+
         path = abspath(join(Picture.root, 'plib.db'))
-        engine = create_engine('sqlite:///{}'.format(path))
-        metadata = MetaData(bind=engine)
+        self.engine = create_engine('sqlite:///{}'.format(path))
+        metadata = MetaData(bind=self.engine)
         table = Table('pictures', metadata, *columns)
         metadata.create_all()
         mapper(Picture, table)
 
-        self.session = create_session(bind=engine, autocommit=False, autoflush=True)
+        self.update_session()
 
         self.pickers = [self.picker()]
         for p in config['pickers']:
@@ -84,13 +86,25 @@ class DB:
             filters = [eval(s, None, Picture.__dict__) for s in filters]
             self.pickers.append(self.picker(name, *filters))
 
+    def update_session(self):
+        if hasattr(self, 'session'):
+            self.session.close()
+        self.session = create_session(bind=self.engine, autocommit=False, autoflush=True)
+
     def query(self):
         return self.session.query(Picture)
 
     def picker(self, name='All', *filters):
-        return ListPicker(name, self.query().filter(*filters))
+        return ListPicker(name, self, *filters)
 
-    def synchronize(self):
+    def get(self):
+        run(['rsync', '-av', '--delete', self.remote, Picture.root + sep])
+        self.update_session()
+
+    def put(self):
+        run(['rsync', '-av', '--delete', Picture.root + sep, self.remote])
+
+    def sync_local(self):
         existing_db = {p.filename for p in self.query()}
         existing_hd = {join(Picture.root, fn) for fn in listdir(Picture.root) if fn != 'plib.db'}
         existing_hd = {fn for fn in existing_hd if isfile(fn)}

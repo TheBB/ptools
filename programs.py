@@ -33,7 +33,8 @@ class SyncProgram:
 
     def __init__(self, main):
         self.name = 'Synchronize'
-        self.staged = main.db.synchronize()
+        main.db.get()
+        self.staged = main.db.sync_local()
         self.moves = {}
         main.register(self)
 
@@ -48,6 +49,7 @@ class SyncProgram:
             for fn, pic in self.moves.items():
                 run(['mv', fn, pic.filename])
 
+            main.db.put()
             main.unregister()
 
     def make_current(self, main):
