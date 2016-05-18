@@ -1,3 +1,4 @@
+from os.path import join
 from subprocess import run
 
 from PyQt5.QtCore import Qt
@@ -45,7 +46,7 @@ class SyncProgram:
             main.db.session.commit()
 
             for fn, pic in self.moves.items():
-                run(['mv', fn, join(self.staging, pic.filename)])
+                run(['mv', fn, pic.filename])
 
             main.unregister()
 
@@ -60,7 +61,8 @@ class SyncProgram:
             if extension == 'jpeg':
                 extension = 'jpg'
 
-            pic = Picture(extension=extension)
+            pic = Picture()
+            pic.extension = extension
             for k, v in flags.items():
                 setattr(pic, k, v)
 
