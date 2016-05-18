@@ -121,11 +121,11 @@ class DB:
     def query(self):
         return self.session.query(Picture)
 
-    def picker_from_filters(self, name='All', filters=[]):
+    def picker_from_filters(self, name='&All', filters=[]):
         filters = [eval(s, None, Picture.__dict__) for s in filters]
         return self.picker(name, *filters)
 
-    def picker(self, name='All', *filters):
+    def picker(self, name='&All', *filters):
         return ListPicker(name, self, *filters)
 
     def get(self):
