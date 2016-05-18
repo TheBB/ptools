@@ -29,9 +29,9 @@ class ListPicker:
 
 class UnionPicker:
 
-    def __init__(self):
+    def __init__(self, name='Union'):
         self.pickers = []
-        self.name = 'Union'
+        self.name = name
 
     def add(self, picker, frequency=1.0):
         self.pickers.append((picker, float(frequency)))
@@ -54,12 +54,23 @@ class Status:
         self.local = abspath(expanduser(config['local']))
         self.remote = config['remote']
 
-        run(['rsync', '-av', self.remote, self.local])
+        # run(['rsync', '-av', self.remote, self.local])
         with open(self.local, 'r') as f:
             self.data = load(f)
 
-        self.pickers = {name: db.picker_from_filters(name, filters)
+        self.pickers = {name: db.picker_from_filters(filters, name)
                         for name, filters in config['pickers'].items()}
+        self.bestof_picker = db.picker_from_filters(config['games']['bestof']['picker'])
+        self.bestof_trigger = lambda pic: eval(config['games']['bestof']['trigger'], None, pic.__dict__)
+        self.bestof_value = lambda pic: eval(config['games']['bestof']['value'], None, pic.__dict__)
+
+    @property
+    def bestof_width(self):
+        pts = self.data['points']
+        if pts == 0:
+            return 15
+        width = int(pts / (2 + pts**0.17))
+        return max(width, 10)
 
     def put(self):
         with open(self.local, 'w') as f:
@@ -108,7 +119,7 @@ class DB:
         self.pickers = [self.picker()]
         for p in config['pickers']:
             name, filters = next(iter(p.items()))
-            self.pickers.append(self.picker_from_filters(name, filters))
+            self.pickers.append(self.picker_from_filters(filters, name))
 
         self.status = Status(self, config['status'])
         self.update_session()
@@ -121,7 +132,19 @@ class DB:
     def query(self):
         return self.session.query(Picture)
 
-    def picker_from_filters(self, name='&All', filters=[]):
+    def picker_from_filters(self, filters=[], name='&All'):
+        if not filters:
+            return self.picker(name)
+        elif isinstance(filters[0], list):
+            picker = UnionPicker(name)
+            for f in filters:
+                freq = 1.0
+                if f and isinstance(f[0], float):
+                    freq = f[0]
+                    f = f[1:]
+                picker.add(self.picker_from_filters(f), freq)
+            return picker
+
         filters = [eval(s, None, Picture.__dict__) for s in filters]
         return self.picker(name, *filters)
 
