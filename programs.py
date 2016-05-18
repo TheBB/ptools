@@ -79,12 +79,15 @@ class BestOfGame(Program):
     def __init__(self, main):
         self.name = 'Best Of'
         self.picker = main.db.status.bestof_picker
-        self.bias = 0.0
 
         self.pts = {True: [0, 0, 0], False: [0, 0, 0]}
         self.max_pts = [5, 5, main.db.status.bestof_width]
-        self.next_message = 'Best of: ' + ', '.join(str(s) for s in self.max_pts)
         self.current = choice([True, False])
+        self.prev_winner = None
+        self.speed = 0.7
+        self.bias = 0.0
+
+        main.show_message( 'Best of: ' + ', '.join(str(s) for s in self.max_pts))
 
         main.register(self)
 
@@ -94,18 +97,19 @@ class BestOfGame(Program):
         while npts > 0 and winner[-1] < self.max_pts[-1]:
             i = 0
             winner[i] += 1
-            while winner[i] >= self.max_pts[i] and winner[-1] < self.max_pts[-1]:
-                winner[i] = loser[i] = 0
+            while winner[i] == self.max_pts[i]:
+                if i == len(self.max_pts) - 1:
+                    break
                 winner[i+1] += 1
+                winner[i] = loser[i] = 0
                 i += 1
             npts -= 1
 
     def next(self, main):
-        if self.next_message:
-            main.show_message(self.next_message)
-            self.next_message = None
-
-        win = random() <= 0.5
+        p = lambda b: max(min((1.020**b) / (1.020**b + 1), 0.93), 0.07)
+        conv = lambda p: self.speed * p
+        threshold = conv(p(self.bias) if self.current else 1 - p(self.bias))
+        win = random() <= threshold
         pic = self.picker.get()
         while main.db.status.bestof_trigger(pic) != win:
             pic = self.picker.get()
@@ -114,14 +118,47 @@ class BestOfGame(Program):
         if win:
             npts = main.db.status.bestof_value(pic)
             self.add_pts(self.current, npts)
-            self.next_message = ['{} points for {}'.format(npts, 'us' if self.current else 'you')]
-            for a, b in zip(self.pts[True], self.pts[False]):
-                self.next_message.append('{} – {}'.format(a, b))
 
-        self.current = not self.current
+            if self.prev_winner != self.current:
+                self.bias = 0.0
+            else:
+                self.bias += (2 * int(self.current) - 1) * min(npts, 15)
+
+            msg = ['{} points for {}'.format(npts, 'us' if self.current else 'you')]
+            for a, b in zip(self.pts[True], self.pts[False]):
+                msg.append('{} – {}'.format(a, b))
+
+            p_t, p_f = conv(p(self.bias)), conv(1 - p(self.bias))
+            denom = p_t + p_f - p_t * p_f
+            if self.current:
+                p_t /= denom
+            else:
+                p_t = 1 - p_f / denom
+            p_f = 1 - p_t
+
+            msg.append('{:.2f}% – {:.2f}%'.format(p_t*100, p_f*100))
+            MessageProgram(main, msg)
+
+            self.prev_winner = self.current
+        else:
+            self.current = not self.current
 
     def make_current(self, main):
         self.next(main)
 
     def key(self, main, event):
         self.next(main)
+
+
+class MessageProgram:
+
+    def __init__(self, main, text):
+        self.text = text
+        main.register(self)
+
+    def make_current(self, main):
+        pass
+
+    def key(self, main, event):
+        main.show_message(self.text)
+        main.unregister()
