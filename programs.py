@@ -25,10 +25,26 @@ class Program:
             main.show_image(self.picker.get())
         elif event.key() == Qt.Key_S:
             SyncProgram(main)
+        elif event.key() == Qt.Key_T:
+            StatusProgram(main)
         elif event.key() == Qt.Key_B:
             BestOfGame(main)
         else:
             main.show_image(self.picker.get())
+
+
+class MessageProgram:
+
+    def __init__(self, main, text):
+        self.text = text
+        main.register(self)
+
+    def make_current(self, main):
+        pass
+
+    def key(self, main, event):
+        main.show_message(self.text)
+        main.unregister()
 
 
 class SyncProgram:
@@ -169,15 +185,20 @@ class BestOfGame(Program):
         self.next(main)
 
 
-class MessageProgram:
+class StatusProgram:
 
-    def __init__(self, main, text):
-        self.text = text
+    def __init__(self, main):
+        self.name = 'Status'
         main.register(self)
 
     def make_current(self, main):
-        pass
+        pts = main.db.status.data['points']
+        if pts == 0:
+            main.show_message('Undecided')
+        else:
+            leader = 'our' if pts > 0 else 'your'
+            main.show_message('{} points in {} favour'.format(abs(pts), leader))
+        main.unregister()
 
     def key(self, main, event):
-        main.show_message(self.text)
-        main.unregister()
+        pass
