@@ -1,7 +1,7 @@
 from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
 from random import choice, uniform
-from subprocess import run
+from subprocess import run, PIPE
 from yaml import dump, load
 
 from sqlalchemy import create_engine, Boolean, Column, Integer, MetaData, String, Table
@@ -156,11 +156,16 @@ class DB:
         return ListPicker(name, self, *filters)
 
     def get(self):
-        run(['rsync', '-av', '--delete', self.remote, Picture.root + sep])
+        ret = run(['rsync', '-a', '--info=stats2', '--delete',
+                   self.remote, Picture.root + sep], stdout=PIPE)
         self.update_session()
+        return ret.stdout.decode()
 
     def put(self):
-        run(['rsync', '-av', '--delete', Picture.root + sep, self.remote])
+        ret = run(['rsync', '-a', '--info=stats2', '--delete',
+                   Picture.root + sep, self.remote], stdout=PIPE)
+        return ret.stdout.decode()
+
 
     def sync_local(self):
         existing_db = {p.filename for p in self.query()}
@@ -175,4 +180,5 @@ class DB:
         for fn in move_files:
             run(['mv', fn, join(self.staging, basename(fn))])
 
-        return [join(self.staging, fn) for fn in listdir(self.staging)]
+        return (len(delete_ids), len(move_files),
+                [join(self.staging, fn) for fn in listdir(self.staging)])

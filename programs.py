@@ -1,6 +1,7 @@
 from os.path import join
 from random import random, choice
 from subprocess import run
+import re
 
 from PyQt5.QtCore import Qt
 
@@ -51,8 +52,17 @@ class SyncProgram:
 
     def __init__(self, main):
         self.name = 'Synchronize'
-        main.db.get()
-        self.staged = main.db.sync_local()
+
+        ret = main.db.get()
+        ndel, nmov, self.staged = main.db.sync_local()
+
+        self.data = {
+            'new_loc': int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n')),
+            'del_loc': int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n')),
+            'del_inc': ndel,
+            'mov_inc': nmov,
+        }
+
         self.moves = {}
         main.register(self)
 
@@ -67,7 +77,17 @@ class SyncProgram:
             for fn, pic in self.moves.items():
                 run(['mv', fn, pic.filename])
 
-            main.db.put()
+            ret = main.db.put()
+            self.data['new_rem'] = int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n'))
+            self.data['del_rem'] = int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n'))
+            main.show_message("""New from remote: {new_loc}<br>
+                                 Deleted remotely: {del_loc}<br>
+                                 Deleted from DB: {del_inc}<br>
+                                 Re-staged: {mov_inc}<br>
+                                 New on remote: {new_rem}<br>
+                                 Deleted remotely: {del_rem}""".format(**self.data),
+                              align='left')
+
             main.unregister()
 
     def make_current(self, main):

@@ -43,10 +43,10 @@ class MainWindow(QMainWindow):
     def show_image(self, pic):
         self.image.load(pic)
 
-    def show_message(self, msg):
+    def show_message(self, msg, align='center'):
         if isinstance(msg, str):
             msg = [msg]
-        text = ''.join('<p align="center">' + m + '</p>' for m in msg)
+        text = ''.join('<p align="{}">{}</p>'.format(align, m) for m in msg)
         MessageDialog(text)
 
     def keyPressEvent(self, event):
