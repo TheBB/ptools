@@ -1,5 +1,6 @@
 from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
+from datetime import datetime, date
 from random import choice, uniform
 from subprocess import run, PIPE
 from yaml import dump, load
@@ -56,7 +57,7 @@ class Status:
 
         run(['rsync', '-av', self.remote, self.local])
         with open(self.local, 'r') as f:
-            self.data = load(f)
+            self.__dict__.update(load(f))
 
         self.pickers = {name: db.picker_from_filters(filters, name)
                         for name, filters in config['pickers'].items()}
@@ -64,29 +65,56 @@ class Status:
         self.bestof_trigger = lambda pic: eval(config['games']['bestof']['trigger'], None, pic.__dict__)
         self.bestof_value = lambda pic: eval(config['games']['bestof']['value'], None, pic.__dict__)
 
-    @property
-    def bestof_width(self):
-        pts = self.data['points']
-        if pts == 0:
-            return 15
-        width = int(pts / (2 + pts**0.17))
-        return max(width, 10)
+    def update(self):
+        msg = None
+
+        today = date.today()
+        ndays = (today - self.last_checkin).days - 1
+        if ndays > 0:
+            new_pts = self.points + ndays
+            if self.points < 0:
+                new_pts = min(self.points + 2 * ndays, 0)
+            else:
+                new_pts = self.points + ndays
+            if new_pts != self.points:
+                msg = 'Added {} points for missing days'.format(new_pts - self.points)
+                self.points = new_pts
+
+        self.last_checkin = today
+        return msg
 
     def put(self):
+        data = {key: getattr(self, key)
+                for key in ['points', 'last_mas', 'last_checkin', 'streak']}
         with open(self.local, 'w') as f:
-            dump(self.data, f, default_flow_style=False)
+            dump(data, f, default_flow_style=False)
         run(['rsync', '-av', self.local, self.remote])
 
+    def mas(self):
+        today = date.today()
+        if today > self.last_mas:
+            if self.points < 0:
+                self.points += 1
+            elif self.points > 0:
+                self.points -= 1
+        self.last_mas = today
+
     def picker(self):
-        if self.data['points'] > 0:
+        if self.points > 0:
             return self.pickers['plus']
-        elif self.data['points'] < 0:
+        elif self.points < 0:
             return self.pickers['minus']
         return self.pickers['standard']
 
-    def add_pts(self, pts):
-        self.data['points'] += pts
-        self.put()
+    def set_pts(self, pts):
+        sign = -1 if pts < 0 else 1
+        if sign * self.streak > 0:
+            s = abs(self.streak)
+            pts += sign * s * (s + 1) // 2
+            self.streak += sign
+        else:
+            self.streak = sign
+        self.points = pts
 
 
 class DB:

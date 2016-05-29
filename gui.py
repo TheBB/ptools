@@ -58,8 +58,11 @@ class MainWindow(QMainWindow):
         self.programs[-1].key(self, event)
 
 
-def run_gui(db):
+def run_gui(db, msg=None):
     app = QApplication(sys.argv)
     win = MainWindow(db)
     win.showMaximized()
+    if msg:
+        print(msg)
+        win.show_message(msg)
     return app.exec_()

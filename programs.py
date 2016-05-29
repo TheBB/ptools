@@ -30,8 +30,14 @@ class Program:
             CleanupProgram(main, self.picker)
         elif event.key() == Qt.Key_T:
             StatusProgram(main)
-        elif event.key() == Qt.Key_B:
-            BestOfGame(main)
+        elif event.key() == Qt.Key_M:
+            main.db.status.mas()
+            StatusProgram(main)
+        elif event.key() == Qt.Key_G:
+            if main.db.status.points != 0:
+                StatusProgram(main)
+            else:
+                BestOfGame(main)
         else:
             main.show_image(self.picker.get())
 
@@ -119,15 +125,14 @@ class BestOfGame(Program):
         self.picker = main.db.status.bestof_picker
 
         self.pts = {True: [0, 0, 0], False: [0, 0, 0]}
-        self.max_pts = [5, 5, main.db.status.bestof_width]
-        self.max_leads = {True: 0, False: 0}
+        self.max_pts = [5, 5, 10]
         self.current = choice([True, False])
         self.prev_winner = None
         self.speed = 0.7
         self.bias = 0.0
         self.done = False
 
-        main.show_message( 'Best of: ' + ', '.join(str(s) for s in self.max_pts))
+        main.show_message('Best of: ' + ', '.join(str(s) for s in self.max_pts))
 
         main.register(self)
 
@@ -145,11 +150,10 @@ class BestOfGame(Program):
                 i += 1
             npts -= 1
 
-        self.max_leads[winner] = max(self.max_leads[winner], w_pts[-1] - l_pts[-1])
-
     def next(self, main):
         if self.done:
             main.unregister()
+            return
 
         p = lambda b: max(min((1.020**b) / (1.020**b + 1), 0.93), 0.07)
         conv = lambda p: self.speed * p
@@ -175,12 +179,11 @@ class BestOfGame(Program):
 
         if self.pts[self.current][-1] == self.max_pts[-1]:
             winner = 'We' if self.current else 'You'
-            total = self.max_pts[-1] + self.max_leads[self.current]
-            total += self.max_pts[-1] - self.pts[not self.current][-1]
+            total = self.max_pts[-1] - self.pts[not self.current][-1]
             msg = '{} win with {}'.format(winner, total)
             MessageProgram(main, msg)
             self.done = True
-            main.db.status.add_pts(sign * total)
+            main.db.status.set_pts(sign * total)
             return
 
         msg = ['{} points for {}'.format(npts, 'us' if self.current else 'you')]
@@ -250,12 +253,12 @@ class StatusProgram:
         main.register(self)
 
     def make_current(self, main):
-        pts = main.db.status.data['points']
+        pts = main.db.status.points
         if pts == 0:
             main.show_message('Undecided')
         else:
             leader = 'our' if pts > 0 else 'your'
-            main.show_message('{} points in {} favour'.format(abs(pts), leader))
+            main.show_message('{} days in {} favour'.format(abs(pts), leader))
         main.unregister()
 
     def key(self, main, event):
