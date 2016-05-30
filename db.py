@@ -27,6 +27,9 @@ class ListPicker:
     def get(self):
         return self.db.query().filter(*self.filters).order_by(func.random()).first()
 
+    def get_all(self):
+        return self.db.query()
+
 
 class UnionPicker:
 
@@ -64,6 +67,11 @@ class Status:
         self.bestof_picker = db.picker_from_filters(config['games']['bestof']['picker'])
         self.bestof_trigger = lambda pic: eval(config['games']['bestof']['trigger'], None, pic.__dict__)
         self.bestof_value = lambda pic: eval(config['games']['bestof']['value'], None, pic.__dict__)
+
+        self.permission_num = config['games']['permission']['num']
+        self.permission_value = (
+            lambda pic: eval(config['games']['permission']['value'], None, pic.__dict__)
+        )
 
     def update(self):
         msg = None

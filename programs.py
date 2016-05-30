@@ -1,7 +1,9 @@
+from itertools import groupby
 from os.path import join
 from random import random, choice
 from subprocess import run
 import re
+import numpy as np
 
 from PyQt5.QtCore import Qt
 
@@ -33,6 +35,8 @@ class Program:
         elif event.key() == Qt.Key_M:
             main.db.status.mas()
             StatusProgram(main)
+        elif event.key() == Qt.Key_R:
+            PermissionProgram(main)
         elif event.key() == Qt.Key_G:
             if main.db.status.points != 0:
                 StatusProgram(main)
@@ -263,3 +267,70 @@ class StatusProgram:
 
     def key(self, main, event):
         pass
+
+
+class PermissionProgram:
+
+    def __init__(self, main):
+        self.name = 'Permission'
+        self.picker = main.db.picker()
+
+        num = sorted([main.db.status.permission_value(p) for p in self.picker.get_all()])
+        self.cumdist = np.zeros((num[-1]+1,), dtype=float)
+        for n, g in groupby(num):
+            self.cumdist[n:] += len(list(g)) / len(num)
+
+        self.remaining = main.db.status.permission_num['minus']
+        self.your_turn = True
+
+        main.register(self)
+
+    def pick(self, main):
+        pts = main.db.status.permission_value(self.pic)
+        if self.your_turn:
+            self.your_pts = pts
+            main.show_message('You pick {} points, our turn'.format(pts))
+            self.remaining = main.db.status.permission_num['plus']
+            self.your_turn = False
+            self.next(main)
+        else:
+            main.show_message(['{} – {}'.format(pts, self.your_pts),
+                               'Permission {}'.format('granted' if self.your_pts > pts else 'denied')])
+            main.unregister()
+
+    def next(self, main):
+        self.pic = self.picker.get()
+        main.show_image(self.pic)
+
+        self.remaining -= 1
+
+        if not self.your_turn:
+            val = main.db.status.permission_value(self.pic)
+            if self.remaining == 0:
+                self.pick(main)
+                return
+
+            cd_orig = self.cumdist ** main.db.status.permission_num['minus']
+            cd_rest = self.cumdist ** self.remaining
+            pd_orig = np.diff(np.hstack(([0], cd_orig)))
+            pd_rest = np.diff(np.hstack(([0], cd_rest)))
+
+            prob_wait = 0.0
+            for i in range(0, pd_orig.shape[0]):
+                prob_wait += pd_rest[i] * sum(pd_orig[:i+1])
+
+            prob_pick = cd_orig[val - 1]
+
+            if prob_pick >= prob_wait:
+                self.pick(main)
+        elif self.remaining == 0:
+            self.pick(main)
+
+    def make_current(self, main):
+        self.next(main)
+
+    def key(self, main, event):
+        if event.key() == Qt.Key_P and self.your_turn:
+            self.pick(main)
+        else:
+            self.next(main)
