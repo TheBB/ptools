@@ -1,3 +1,4 @@
+from datetime import datetime, date, timedelta
 from itertools import groupby
 from os.path import join
 from random import random, choice
@@ -265,7 +266,17 @@ class StatusProgram:
             main.show_message('Undecided')
         else:
             leader = 'our' if pts > 0 else 'your'
-            main.show_message('{} points in {} favour'.format(abs(pts), leader))
+            msg = ['{} points in {} favour'.format(abs(pts), leader)]
+            if main.db.status.permission_until > datetime.now():
+                diff = main.db.status.permission_until - datetime.now()
+                msg.append('Permission for {} minutes'.format(diff.seconds//60))
+            else:
+                if main.db.status.ask_blocked_until > datetime.now():
+                    diff = main.db.status.ask_blocked_until - datetime.now()
+                    msg.append('Can ask permission in {} minutes'.format(diff.seconds//60 + 1))
+                else:
+                    msg.append('Can ask permission')
+            main.show_message(msg)
         main.unregister()
 
     def key(self, main, event):

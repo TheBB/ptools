@@ -1,6 +1,6 @@
+from datetime import datetime, date, timedelta
 from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
-from datetime import datetime, date, timedelta
 from random import choice, uniform
 from subprocess import run, PIPE
 from yaml import dump, load
@@ -79,7 +79,6 @@ class Status:
         today = date.today()
         ndays = (today - self.last_checkin).days - 1
         if ndays > 0:
-            new_pts = self.points + ndays
             if self.points < 0:
                 new_pts = min(self.points + 2 * ndays, 0)
             else:
@@ -112,18 +111,21 @@ class Status:
         run(['rsync', '-av', self.local, self.remote])
 
     def mas(self):
-        self.last_mas = date.today()
         if self.points < 0:
             self.points += 1
+            self.last_mas = date.today()
             return 'One point removed from your lead'
         elif self.points > 0:
             if self.permission_until < datetime.now():
                 self.points -= 1
                 self.permission_until = datetime.now() - timedelta(hours=2)
+                self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+                self.last_mas = date.today()
                 return 'You have permission, one point removed from our lead'
             else:
-                self.points += 2
-                return 'Permission not given, two points added to our lead'
+                self.points += 1
+                self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+                return 'Permission not given, one point added to our lead'
         else:
             return 'Undecided position, you should play'
 
