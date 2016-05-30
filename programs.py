@@ -328,6 +328,8 @@ class PermissionProgram:
 
             prob_pick = cd_orig[val - 1]
 
+            print('{} remaining, {} pick, {} wait'.format(self.remaining, prob_pick, prob_wait))
+
             if prob_pick >= prob_wait:
                 self.pick(main)
         elif self.remaining == 0:
