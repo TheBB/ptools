@@ -116,7 +116,7 @@ class Status:
             self.last_mas = date.today()
             return 'One point removed from your lead'
         elif self.points > 0:
-            if self.permission_until < datetime.now():
+            if self.permission_until >= datetime.now():
                 self.points -= 1
                 self.permission_until = datetime.now() - timedelta(hours=2)
                 self.ask_blocked_until = datetime.now() + timedelta(hours=1)
