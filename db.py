@@ -1,6 +1,6 @@
 from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from random import choice, uniform
 from subprocess import run, PIPE
 from yaml import dump, load
@@ -91,21 +91,41 @@ class Status:
         self.last_checkin = today
         return msg
 
+    def give_permission(self, permission):
+        if permission:
+            self.permission_until = datetime.now() + timedelta(hours=1)
+        self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+
+    def can_ask_permission(self):
+        if self.points <= 0:
+            return False
+        if datetime.now() < self.ask_blocked_until:
+            return False
+        return True
+
     def put(self):
         data = {key: getattr(self, key)
-                for key in ['points', 'last_mas', 'last_checkin', 'streak']}
+                for key in ['points', 'last_mas', 'last_checkin', 'streak',
+                            'permission_until', 'ask_blocked_until']}
         with open(self.local, 'w') as f:
             dump(data, f, default_flow_style=False)
         run(['rsync', '-av', self.local, self.remote])
 
     def mas(self):
-        today = date.today()
-        if today > self.last_mas:
-            if self.points < 0:
-                self.points += 1
-            elif self.points > 0:
+        self.last_mas = date.today()
+        if self.points < 0:
+            self.points += 1
+            return 'One point removed from your lead'
+        elif self.points > 0:
+            if self.permission_until < datetime.now():
                 self.points -= 1
-        self.last_mas = today
+                self.permission_until = datetime.now() - timedelta(hours=2)
+                return 'You have permission, one point removed from our lead'
+            else:
+                self.points += 2
+                return 'Permission not given, two points added to our lead'
+        else:
+            return 'Undecided position, you should play'
 
     def picker(self):
         if self.points > 0:

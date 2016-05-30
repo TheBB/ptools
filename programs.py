@@ -33,10 +33,13 @@ class Program:
         elif event.key() == Qt.Key_T:
             StatusProgram(main)
         elif event.key() == Qt.Key_M:
-            main.db.status.mas()
-            StatusProgram(main)
+            msg = main.db.status.mas()
+            main.show_message(msg)
         elif event.key() == Qt.Key_R:
-            PermissionProgram(main)
+            if main.db.status.can_ask_permission():
+                PermissionProgram(main)
+            else:
+                main.show_message("Can't ask permission")
         elif event.key() == Qt.Key_G:
             if main.db.status.points != 0:
                 StatusProgram(main)
@@ -262,7 +265,7 @@ class StatusProgram:
             main.show_message('Undecided')
         else:
             leader = 'our' if pts > 0 else 'your'
-            main.show_message('{} days in {} favour'.format(abs(pts), leader))
+            main.show_message('{} points in {} favour'.format(abs(pts), leader))
         main.unregister()
 
     def key(self, main, event):
@@ -283,6 +286,9 @@ class PermissionProgram:
         self.remaining = main.db.status.permission_num['minus']
         self.your_turn = True
 
+        main.show_message(['You get to pick from {}'.format(main.db.status.permission_num['minus']),
+                           'We get to pick from {}'.format(main.db.status.permission_num['plus'])])
+
         main.register(self)
 
     def pick(self, main):
@@ -296,6 +302,7 @@ class PermissionProgram:
         else:
             main.show_message(['{} – {}'.format(pts, self.your_pts),
                                'Permission {}'.format('granted' if self.your_pts > pts else 'denied')])
+            main.db.status.give_permission(self.your_pts > pts)
             main.unregister()
 
     def next(self, main):
