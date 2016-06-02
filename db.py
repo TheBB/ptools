@@ -93,7 +93,7 @@ class Status:
     def give_permission(self, permission):
         if permission:
             self.permission_until = datetime.now() + timedelta(hours=1)
-        self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+        self.ask_blocked_until = datetime.now() + timedelta(minutes=15)
 
     def can_ask_permission(self):
         if self.points <= 0:
@@ -119,7 +119,7 @@ class Status:
             if self.permission_until >= datetime.now():
                 self.points -= 1
                 self.permission_until = datetime.now() - timedelta(hours=2)
-                self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+                self.ask_blocked_until = datetime.now() + timedelta(minutes=15)
                 self.last_mas = date.today()
                 return 'You have permission, one point removed from our lead'
             else:
