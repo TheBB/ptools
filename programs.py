@@ -267,15 +267,16 @@ class StatusProgram:
         else:
             leader = 'our' if pts > 0 else 'your'
             msg = ['{} points in {} favour'.format(abs(pts), leader)]
-            if main.db.status.permission_until > datetime.now():
-                diff = main.db.status.permission_until - datetime.now()
-                msg.append('Permission for {} minutes'.format(diff.seconds//60))
-            else:
-                if main.db.status.ask_blocked_until > datetime.now():
-                    diff = main.db.status.ask_blocked_until - datetime.now()
-                    msg.append('Can ask permission in {} minutes'.format(diff.seconds//60 + 1))
+            if main.db.status.points > 0:
+                if main.db.status.permission_until > datetime.now():
+                    diff = main.db.status.permission_until - datetime.now()
+                    msg.append('Permission for {} minutes'.format(diff.seconds//60))
                 else:
-                    msg.append('Can ask permission')
+                    if main.db.status.ask_blocked_until > datetime.now():
+                        diff = main.db.status.ask_blocked_until - datetime.now()
+                        msg.append('Can ask permission in {} minutes'.format(diff.seconds//60 + 1))
+                    else:
+                        msg.append('Can ask permission')
             main.show_message(msg)
         main.unregister()
 
