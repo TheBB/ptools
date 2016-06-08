@@ -15,11 +15,10 @@ class Program:
 
     def __init__(self, main, name='PTools'):
         self.name = 'PTools'
-        self.picker = None
+        self.picker = main.db.status.picker()
         main.register(self)
 
     def make_current(self, main):
-        self.picker = main.db.status.picker()
         main.show_image(self.picker.get())
         main.setWindowTitle(self.name)
 
