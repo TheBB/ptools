@@ -35,6 +35,8 @@ class Program:
             CleanupProgram(main, self.picker)
         elif event.key() == Qt.Key_T:
             StatusProgram(main)
+        elif event.key() == Qt.Key_I:
+            InfoProgram(main)
         elif event.key() == Qt.Key_M:
             msg = main.db.status.mas()
             main.show_message(msg)
@@ -349,3 +351,17 @@ class PermissionProgram:
             self.pick(main)
         else:
             self.next(main)
+
+
+class InfoProgram:
+
+    def __init__(self, main):
+        main.register(self)
+
+    def make_current(self, main):
+        pic = main.current_pic
+        message = ['ID: {}'.format(pic.id)]
+        main.show_message(message)
+
+    def key(self, main, event):
+        main.unregister()
