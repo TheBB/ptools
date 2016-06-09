@@ -14,16 +14,21 @@ from db import Picture, UnionPicker
 class Program:
 
     def __init__(self, main):
+        self.picker = None
         self.picker = main.db.status.picker()
         main.register(self)
 
+    def pic(self, main):
+        picker = self.picker or main.db.status.picker()
+        main.show_image(picker.get())
+
     def make_current(self, main):
-        main.show_image(self.picker.get())
+        self.pic(main)
 
     def key(self, main, event):
         if event.key() == Qt.Key_P:
-            self.picker = (main.get_picker() or self.picker)
-            main.show_image(self.picker.get())
+            self.picker = main.get_picker() or self.picker
+            self.pic(main)
         elif event.key() == Qt.Key_S:
             SyncProgram(main)
         elif event.key() == Qt.Key_D:
