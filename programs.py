@@ -13,14 +13,12 @@ from db import Picture, UnionPicker
 
 class Program:
 
-    def __init__(self, main, name='PTools'):
-        self.name = 'PTools'
+    def __init__(self, main):
         self.picker = main.db.status.picker()
         main.register(self)
 
     def make_current(self, main):
         main.show_image(self.picker.get())
-        main.setWindowTitle(self.name)
 
     def key(self, main, event):
         if event.key() == Qt.Key_P:
@@ -66,8 +64,6 @@ class MessageProgram:
 class SyncProgram:
 
     def __init__(self, main):
-        self.name = 'Synchronize'
-
         ret = main.db.get()
         ndel, nmov, self.staged = main.db.sync_local()
 
@@ -128,7 +124,6 @@ class SyncProgram:
 class BestOfGame(Program):
 
     def __init__(self, main):
-        self.name = 'Best Of'
         self.picker = main.db.status.bestof_picker
 
         self.pts = {True: [0, 0, 0], False: [0, 0, 0]}
@@ -220,7 +215,6 @@ class BestOfGame(Program):
 class CleanupProgram:
 
     def __init__(self, main, picker):
-        self.name = 'Cleanup'
         self.picker = picker
         main.register(self)
 
@@ -256,7 +250,6 @@ class CleanupProgram:
 class StatusProgram:
 
     def __init__(self, main):
-        self.name = 'Status'
         main.register(self)
 
     def make_current(self, main):
@@ -286,7 +279,6 @@ class StatusProgram:
 class PermissionProgram:
 
     def __init__(self, main):
-        self.name = 'Permission'
         self.picker = main.db.picker()
 
         num = sorted([main.db.status.permission_value(p) for p in self.picker.get_all()])
