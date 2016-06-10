@@ -15,7 +15,6 @@ class Program:
 
     def __init__(self, main):
         self.picker = None
-        self.picker = main.db.status.picker()
         main.register(self)
 
     def pic(self, main):
@@ -51,7 +50,7 @@ class Program:
             else:
                 BestOfGame(main)
         else:
-            main.show_image(self.picker.get())
+            self.pic(main)
 
 
 class MessageProgram:
