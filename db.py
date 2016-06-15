@@ -93,6 +93,8 @@ class Status:
     def give_permission(self, permission):
         if permission:
             self.permission_until = datetime.now() + timedelta(hours=1)
+
+    def begin_permission(self):
         self.ask_blocked_until = datetime.now() + timedelta(minutes=15)
 
     def can_ask_permission(self):

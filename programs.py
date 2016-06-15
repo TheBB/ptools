@@ -41,6 +41,7 @@ class Program:
             main.show_message(msg)
         elif event.key() == Qt.Key_R:
             if main.db.status.can_ask_permission():
+                main.db.status.begin_permission()
                 PermissionProgram(main)
             else:
                 main.show_message("Can't ask permission")
