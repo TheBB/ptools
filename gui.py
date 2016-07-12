@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox
 
@@ -49,6 +49,12 @@ class MainWindow(QMainWindow):
             msg = [msg]
         text = ''.join('<p align="{}">{}</p>'.format(align, m) for m in msg)
         MessageDialog(text)
+
+    def start_timer(self, delay, callback):
+        timer = QTimer(self)
+        timer.timeout.connect(lambda: callback(self, timer))
+        timer.start(delay)
+        return timer
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
