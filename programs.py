@@ -34,8 +34,6 @@ class Program:
             CleanupProgram(main, self.picker)
         elif event.key() == Qt.Key_T:
             StatusProgram(main)
-        elif event.key() == Qt.Key_I:
-            InfoProgram(main)
         elif event.key() == Qt.Key_M:
             msg = main.db.status.mas()
             main.show_message(msg)

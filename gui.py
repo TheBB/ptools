@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox
 
 from gui_utils import ImageView, FlagsDialog, MessageDialog, PickerDialog
-from programs import Program
+from programs import Program, InfoProgram
 
 
 class MainWindow(QMainWindow):
@@ -57,10 +57,12 @@ class MainWindow(QMainWindow):
         return timer
 
     def keyPressEvent(self, event):
+        if event.key() == Qt.Key_I:
+            InfoProgram(self)
+            return
         if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
             self.close()
             return
-
         self.programs[-1].key(self, event)
 
 
