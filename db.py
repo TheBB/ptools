@@ -72,6 +72,7 @@ class Status:
         self.permission_value = (
             lambda pic: eval(config['games']['permission']['value'], None, pic.__dict__)
         )
+        self.permission_wait = int(config['games']['permission']['wait'])
 
     def update(self):
         msg = None
@@ -95,7 +96,7 @@ class Status:
             self.permission_until = datetime.now() + timedelta(hours=1)
 
     def begin_permission(self):
-        self.ask_blocked_until = datetime.now() + timedelta(minutes=15)
+        self.ask_blocked_until = datetime.now() + timedelta(minutes=self.permission_wait)
 
     def can_ask_permission(self):
         if self.points <= 0:
@@ -121,7 +122,7 @@ class Status:
             if self.permission_until >= datetime.now():
                 self.points -= 1
                 self.permission_until = datetime.now() - timedelta(hours=2)
-                self.ask_blocked_until = datetime.now() + timedelta(minutes=15)
+                self.ask_blocked_until = datetime.now() + timedelta(minutes=self.permission_wait)
                 self.last_mas = date.today()
                 return 'You have permission, one point removed from our lead'
             else:
