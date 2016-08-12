@@ -112,7 +112,7 @@ class PickerWidget(QWidget):
 
 class MessageDialog(QDialog):
 
-    def __init__(self, text):
+    def __init__(self, text, callback=None):
         super(MessageDialog, self).__init__()
         self.setWindowTitle('PTools')
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -136,9 +136,12 @@ class MessageDialog(QDialog):
 
         layout.addWidget(label)
 
+        self.callback = callback
         self.exec_()
 
     def keyPressEvent(self, event):
+        if self.callback:
+            self.callback(event.text())
         self.accept()
 
 

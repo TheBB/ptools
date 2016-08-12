@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from itertools import groupby
 from os.path import join
 from random import random, choice
+from string import ascii_lowercase
 from subprocess import run
 import re
 import numpy as np
@@ -47,7 +48,7 @@ class ShowProgram(AbstractProgram):
             main.show_message(msg)
         elif event.key() == Qt.Key_R:
             if main.db.status.can_ask_permission():
-                main.db.status.begin_permission()
+                main.db.status.block_until(main.db.status.permission_break)
                 PermissionProgram(main)
             else:
                 main.show_message("Can't ask permission")
@@ -275,9 +276,14 @@ class PermissionProgram(AbstractProgram):
             self.your_turn = False
             self.next(main)
         else:
-            main.show_message(['{} – {}'.format(pts, self.your_pts),
-                               'Permission {}'.format('granted' if self.your_pts > pts else 'denied')])
-            main.db.status.give_permission(self.your_pts > pts)
+            conf = choice(ascii_lowercase)
+            ret = main.show_message(['{} – {}'.format(pts, self.your_pts),
+                                     'Permission {}'.format('granted' if self.your_pts > pts else 'denied'),
+                                     'Confirm with {}'.format(conf.upper())])
+            if conf == ret.lower():
+                main.db.status.give_permission(self.your_pts > pts)
+            else:
+                main.db.status.block_until(main.db.status.permission_break)
             main.unregister()
 
     def next(self, main):

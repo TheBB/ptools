@@ -47,7 +47,9 @@ class MainWindow(QMainWindow):
         if isinstance(msg, str):
             msg = [msg]
         text = ''.join('<p align="{}">{}</p>'.format(align, m) for m in msg)
-        MessageDialog(text)
+        retval = []
+        MessageDialog(text, lambda e: retval.append(e))
+        return retval[0]
 
     def start_timer(self, delay, callback):
         timer = QTimer(self)

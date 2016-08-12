@@ -73,6 +73,7 @@ class Status:
             lambda pic: eval(config['games']['permission']['value'], None, pic.__dict__)
         )
         self.permission_wait = int(config['games']['permission']['wait'])
+        self.permission_break = int(config['games']['permission']['break'])
 
     def update(self):
         msg = None
@@ -95,8 +96,10 @@ class Status:
         if permission:
             self.permission_until = datetime.now() + timedelta(hours=1)
 
-    def begin_permission(self):
-        self.ask_blocked_until = datetime.now() + timedelta(minutes=self.permission_wait)
+    def block_until(self, delta=None):
+        if delta is None:
+            delta = self.permission_wait
+        self.ask_blocked_until = datetime.now() + timedelta(minutes=delta)
 
     def can_ask_permission(self):
         if self.points <= 0:
