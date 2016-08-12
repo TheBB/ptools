@@ -328,7 +328,7 @@ class PermissionProgram(AbstractProgram):
 
         if not self.your_turn:
             val = main.db.status.perm_value(self.pic)
-            if val >= self.your_pts:
+            if val >= self.your_pts or self.remaining == 0:
                 self.pick(main)
                 return
         elif self.remaining == 0:
