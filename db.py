@@ -68,12 +68,15 @@ class Status:
         self.bestof_trigger = lambda pic: eval(config['games']['bestof']['trigger'], None, pic.__dict__)
         self.bestof_value = lambda pic: eval(config['games']['bestof']['value'], None, pic.__dict__)
 
-        self.permission_num = config['games']['permission']['num']
-        self.permission_value = (
+        self.perm_value = (
             lambda pic: eval(config['games']['permission']['value'], None, pic.__dict__)
         )
-        self.permission_wait = int(config['games']['permission']['wait'])
-        self.permission_break = int(config['games']['permission']['break'])
+        self.perm_num = int(config['games']['permission']['num'])
+        self.perm_prob = float(config['games']['permission']['prob'])
+        self.perm_wait = int(config['games']['permission']['wait'])
+        self.perm_break = int(config['games']['permission']['break'])
+        self.perm_ours = db.picker_from_filters(config['games']['permission']['our_picker'])
+        self.perm_yours = db.picker_from_filters(config['games']['permission']['your_picker'])
 
     def update(self):
         msg = None
@@ -94,11 +97,11 @@ class Status:
 
     def give_permission(self, permission):
         if permission:
-            self.permission_until = datetime.now() + timedelta(hours=1)
+            self.perm_until = datetime.now() + timedelta(hours=1)
 
     def block_until(self, delta=None):
         if delta is None:
-            delta = self.permission_wait
+            delta = self.perm_wait
         self.ask_blocked_until = datetime.now() + timedelta(minutes=delta)
 
     def can_ask_permission(self):
@@ -111,7 +114,7 @@ class Status:
     def put(self):
         data = {key: getattr(self, key)
                 for key in ['points', 'last_mas', 'last_checkin', 'streak',
-                            'permission_until', 'ask_blocked_until']}
+                            'perm_until', 'ask_blocked_until']}
         with open(self.local, 'w') as f:
             dump(data, f, default_flow_style=False)
         run(['rsync', '-av', self.local, self.remote])
@@ -122,10 +125,10 @@ class Status:
             self.last_mas = date.today()
             return 'One point removed from your lead'
         elif self.points > 0:
-            if self.permission_until >= datetime.now():
+            if self.perm_until >= datetime.now():
                 self.points -= 1
-                self.permission_until = datetime.now() - timedelta(hours=2)
-                self.ask_blocked_until = datetime.now() + timedelta(minutes=self.permission_wait)
+                self.perm_until = datetime.now() - timedelta(hours=2)
+                self.ask_blocked_until = datetime.now() + timedelta(minutes=self.perm_wait)
                 self.last_mas = date.today()
                 return 'You have permission, one point removed from our lead'
             else:
