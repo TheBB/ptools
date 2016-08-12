@@ -11,17 +11,27 @@ from PyQt5.QtCore import Qt
 from db import Picture, UnionPicker
 
 
-class Program:
+class AbstractProgram:
+
+    def key(self, main, event):
+        pass
+
+    def make_current(self, main, *args, **kwargs):
+        pass
+
+
+class ShowProgram(AbstractProgram):
 
     def __init__(self, main):
         self.picker = None
         main.register(self)
+        self.make_current(main)
 
     def pic(self, main):
         picker = self.picker or main.db.status.picker()
         main.show_image(picker.get())
 
-    def make_current(self, main):
+    def make_current(self, main, *args, **kwargs):
         self.pic(main)
 
     def key(self, main, event):
@@ -30,8 +40,6 @@ class Program:
             self.pic(main)
         elif event.key() == Qt.Key_S:
             SyncProgram(main)
-        elif event.key() == Qt.Key_D:
-            CleanupProgram(main, self.picker)
         elif event.key() == Qt.Key_T:
             StatusProgram(main)
         elif event.key() == Qt.Key_M:
@@ -52,21 +60,18 @@ class Program:
             self.pic(main)
 
 
-class MessageProgram:
+class MessageProgram(AbstractProgram):
 
     def __init__(self, main, text):
         self.text = text
         main.register(self)
-
-    def make_current(self, main):
-        pass
 
     def key(self, main, event):
         main.show_message(self.text)
         main.unregister()
 
 
-class SyncProgram:
+class SyncProgram(AbstractProgram):
 
     def __init__(self, main):
         ret = main.db.get()
@@ -81,6 +86,7 @@ class SyncProgram:
 
         self.moves = {}
         main.register(self)
+        self.next(main)
 
     def next(self, main):
         if self.staged:
@@ -106,9 +112,6 @@ class SyncProgram:
 
             main.unregister()
 
-    def make_current(self, main):
-        self.next(main)
-
     def key(self, main, event):
         flags = main.get_flags()
         if flags:
@@ -126,7 +129,7 @@ class SyncProgram:
             self.next(main)
 
 
-class BestOfGame(Program):
+class BestOfGame(ShowProgram):
 
     def __init__(self, main):
         self.picker = main.db.status.bestof_picker
@@ -142,6 +145,7 @@ class BestOfGame(Program):
         main.show_message('Best of: ' + ', '.join(str(s) for s in self.max_pts))
 
         main.register(self)
+        self.next(main)
 
     def add_pts(self, winner, npts):
         l_pts = self.pts[not winner]
@@ -210,54 +214,17 @@ class BestOfGame(Program):
 
         self.prev_winner = self.current
 
-    def make_current(self, main):
+    def make_current(self, main, *args, **kwargs):
         self.next(main)
 
     def key(self, main, event):
         self.next(main)
 
 
-class CleanupProgram:
-
-    def __init__(self, main, picker):
-        self.picker = picker
-        main.register(self)
-
-    def next(self, main):
-        self.pic = self.picker.get()
-        main.show_image(self.pic)
-
-    def make_current(self, main):
-        self.next(main)
-
-    def key(self, main, event):
-        if event.key() == Qt.Key_C:
-            ret = main.db.put()
-            data = {
-                'new_rem': int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n')),
-                'del_rem': int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n')),
-            }
-            main.show_message("""New on remote: {new_rem}<br>
-                                 Deleted remotely: {del_rem}""".format(**data),
-                              align='left')
-            main.unregister()
-            return
-        if event.key() == Qt.Key_E:
-            main.db.update_session()
-            main.unregister()
-            return
-
-        if event.key() == Qt.Key_D:
-            main.db.delete(self.pic)
-        self.next(main)
-
-
-class StatusProgram:
+class StatusProgram(AbstractProgram):
 
     def __init__(self, main):
         main.register(self)
-
-    def make_current(self, main):
         pts = main.db.status.points
         if pts == 0:
             main.show_message('Undecided')
@@ -275,13 +242,12 @@ class StatusProgram:
                     else:
                         msg.append('Can ask permission')
             main.show_message(msg)
-        main.unregister()
 
     def key(self, main, event):
-        pass
+        main.unregister()
 
 
-class PermissionProgram:
+class PermissionProgram(AbstractProgram):
 
     def __init__(self, main):
         self.picker = main.db.picker()
@@ -298,6 +264,7 @@ class PermissionProgram:
                            'We get to pick from {}'.format(main.db.status.permission_num['plus'])])
 
         main.register(self)
+        self.next(main)
 
     def pick(self, main):
         pts = main.db.status.permission_value(self.pic)
@@ -341,9 +308,6 @@ class PermissionProgram:
         elif self.remaining == 0:
             self.pick(main)
 
-    def make_current(self, main):
-        self.next(main)
-
     def key(self, main, event):
         if event.key() == Qt.Key_P and self.your_turn:
             self.pick(main)
@@ -351,12 +315,10 @@ class PermissionProgram:
             self.next(main)
 
 
-class InfoProgram:
+class InfoProgram(AbstractProgram):
 
     def __init__(self, main):
         main.register(self)
-
-    def make_current(self, main):
         pic = main.current_pic
         message = ['ID: {}'.format(pic.id)]
         main.show_message(message)

@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QMessageBox
 
 from gui_utils import ImageView, FlagsDialog, MessageDialog, PickerDialog
-from programs import Program, InfoProgram
+from programs import ShowProgram, InfoProgram
 
 
 class MainWindow(QMainWindow):
@@ -22,15 +22,14 @@ class MainWindow(QMainWindow):
         self.flags_dialog = FlagsDialog(self.db)
 
         self.programs = []
-        Program(self)
+        ShowProgram(self)
 
     def register(self, program):
         self.programs.append(program)
-        program.make_current(self)
 
-    def unregister(self):
+    def unregister(self, *args, **kwargs):
         self.programs.pop()
-        self.programs[-1].make_current(self)
+        self.programs[-1].make_current(self, *args, **kwargs)
 
     def get_picker(self):
         if self.picker_dialog.exec_() == QDialog.Accepted:
