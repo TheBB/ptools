@@ -73,7 +73,6 @@ class Status:
         )
         self.perm_num = int(config['games']['permission']['num'])
         self.perm_prob = float(config['games']['permission']['prob'])
-        self.perm_wait = int(config['games']['permission']['wait'])
         self.perm_break = int(config['games']['permission']['break'])
         self.perm_ours = db.picker_from_filters(config['games']['permission']['our_picker'])
         self.perm_yours = db.picker_from_filters(config['games']['permission']['your_picker'])
@@ -95,13 +94,13 @@ class Status:
         self.last_checkin = today
         return msg
 
-    def give_permission(self, permission):
+    def give_permission(self, permission, reduced=0):
         if permission:
-            self.perm_until = datetime.now() + timedelta(hours=1)
+            self.perm_until = datetime.now() + timedelta(minutes=60-reduced)
 
     def block_until(self, delta=None):
         if delta is None:
-            delta = self.perm_wait
+            delta = self.perm_break
         self.ask_blocked_until = datetime.now() + timedelta(minutes=delta)
 
     def can_ask_permission(self):
@@ -128,7 +127,6 @@ class Status:
             if self.perm_until >= datetime.now():
                 self.points -= 1
                 self.perm_until = datetime.now() - timedelta(hours=2)
-                self.ask_blocked_until = datetime.now() + timedelta(minutes=self.perm_wait)
                 self.last_mas = date.today()
                 return 'You have permission, one point removed from our lead'
             else:

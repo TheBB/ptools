@@ -1,5 +1,6 @@
 from datetime import datetime, date, timedelta
 from itertools import groupby
+from math import ceil
 from os.path import join
 from random import random, choice
 from string import ascii_lowercase
@@ -292,6 +293,8 @@ class PermissionProgram(AbstractProgram):
         self.remaining = num_you
         self.picker = self.picker_you
         self.your_turn = True
+        self.total_added = 0
+        self.prev_val = 0
 
         main.show_message(['You get to pick from {}'.format(num_you),
                            'We get to pick from {}'.format(self.num_our)])
@@ -303,7 +306,6 @@ class PermissionProgram(AbstractProgram):
         pts = main.db.status.perm_value(self.pic)
         if self.your_turn:
             main.show_message('You pick {} points, our turn'.format(pts))
-            main.db.status.block_until()
             self.your_pts = pts
             self.remaining = self.num_our
             self.your_turn = False
@@ -315,9 +317,10 @@ class PermissionProgram(AbstractProgram):
                                      'Permission {}'.format('granted' if self.your_pts > pts else 'denied'),
                                      'Confirm with {}'.format(conf.upper())])
             if conf == ret.lower():
-                main.db.status.give_permission(self.your_pts > pts)
+                main.db.status.give_permission(self.your_pts > pts, reduced=self.total_added)
+                main.db.status.block_until(self.total_added)
             else:
-                main.db.status.block_until(main.db.status.perm_break)
+                main.db.status.block_until(main.db.status.perm_break + self.total_added)
             main.unregister()
 
     def next(self, main):
@@ -331,6 +334,13 @@ class PermissionProgram(AbstractProgram):
             if val >= self.your_pts or self.remaining == 0:
                 self.pick(main)
                 return
+            now = datetime.now()
+            if hasattr(self, 'until') and now < self.until:
+                add = int(ceil((self.until - now).total_seconds()))
+                self.remaining += add
+                self.total_added += add
+            self.prev_val = max(self.prev_val - 1, val)
+            self.until = now + timedelta(seconds=self.prev_val)
         elif self.remaining == 0:
             self.pick(main)
 
