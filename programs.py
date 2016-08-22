@@ -295,6 +295,7 @@ class PermissionProgram(AbstractProgram):
         self.your_turn = True
         self.total_added = 0
         self.prev_val = 0
+        self.max_pts = 0
 
         main.show_message(['You get to pick from {}'.format(num_you),
                            'We get to pick from {}'.format(self.num_our)])
@@ -303,8 +304,8 @@ class PermissionProgram(AbstractProgram):
         self.next(main)
 
     def pick(self, main):
-        pts = main.db.status.perm_value(self.pic)
         if self.your_turn:
+            pts = main.db.status.perm_value(self.pic)
             main.show_message('You pick {} points, our turn'.format(pts))
             self.your_pts = pts
             self.remaining = self.num_our
@@ -312,12 +313,13 @@ class PermissionProgram(AbstractProgram):
             self.picker = self.picker_our
             self.next(main)
         else:
+            pts = self.max_pts
             conf = choice(ascii_lowercase)
             ret = main.show_message(['{} – {}'.format(pts, self.your_pts),
                                      'Permission {}'.format('granted' if self.your_pts > pts else 'denied'),
                                      'Confirm with {}'.format(conf.upper())])
             if conf == ret.lower():
-                main.db.status.give_permission(self.your_pts > pts, reduced=self.total_added)
+                main.db.status.give_permission(self.your_pts > pts, reduced=min(55, self.total_added//4))
                 main.db.status.block_until(self.total_added)
             else:
                 main.db.status.block_until(main.db.status.perm_break + self.total_added)
@@ -331,7 +333,8 @@ class PermissionProgram(AbstractProgram):
 
         if not self.your_turn:
             val = main.db.status.perm_value(self.pic)
-            if val >= self.your_pts or self.remaining == 0:
+            self.max_pts = max(val, self.max_pts)
+            if self.remaining == 0:
                 self.pick(main)
                 return
             now = datetime.now()
@@ -339,8 +342,13 @@ class PermissionProgram(AbstractProgram):
                 add = int(ceil((self.until - now).total_seconds()))
                 self.remaining += add
                 self.total_added += add
+            elif hasattr(self, 'before') and now > self.before:
+                add = int(ceil((now - self.before).total_seconds()))
+                self.remaining += add
+                self.total_added += add
             self.prev_val = max(self.prev_val - 1, val)
-            self.until = now + timedelta(seconds=self.prev_val)
+            self.until = now + timedelta(seconds=self.prev_val*main.db.status.perm_m_until)
+            self.before = now + timedelta(seconds=self.prev_val*main.db.status.perm_m_before)
         elif self.remaining == 0:
             self.pick(main)
 

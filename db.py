@@ -74,6 +74,7 @@ class Status:
         self.perm_num = int(config['games']['permission']['num'])
         self.perm_prob = float(config['games']['permission']['prob'])
         self.perm_break = int(config['games']['permission']['break'])
+        self.perm_m_until, self.perm_m_before = config['games']['permission']['margins']
         self.perm_ours = db.picker_from_filters(config['games']['permission']['our_picker'])
         self.perm_yours = db.picker_from_filters(config['games']['permission']['your_picker'])
 
