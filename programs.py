@@ -1,6 +1,6 @@
 from datetime import datetime, date, timedelta
 from itertools import groupby
-from math import ceil
+from math import ceil, sqrt
 from os.path import join
 from random import random, choice
 from string import ascii_lowercase
@@ -319,10 +319,10 @@ class PermissionProgram(AbstractProgram):
                                      'Permission {}'.format('granted' if self.your_pts > pts else 'denied'),
                                      'Confirm with {}'.format(conf.upper())])
             if conf == ret.lower():
-                main.db.status.give_permission(self.your_pts > pts, reduced=min(55, self.total_added//4))
-                main.db.status.block_until(self.total_added)
+                main.db.status.give_permission(self.your_pts > pts, reduced=min(55, self.total_added/3))
+                main.db.status.block_until(self.total_added/4)
             else:
-                main.db.status.block_until(main.db.status.perm_break + self.total_added)
+                main.db.status.block_until(main.db.status.perm_break + self.total_added/4)
             main.unregister()
 
     def next(self, main):
@@ -340,15 +340,21 @@ class PermissionProgram(AbstractProgram):
             now = datetime.now()
             if hasattr(self, 'until') and now < self.until:
                 add = int(ceil((self.until - now).total_seconds()))
+                print('too soon', add)
                 self.remaining += add
                 self.total_added += add
             elif hasattr(self, 'before') and now > self.before:
                 add = int(ceil((now - self.before).total_seconds()))
+                print('too late', add)
                 self.remaining += add
                 self.total_added += add
             self.prev_val = max(self.prev_val - 1, val)
-            self.until = now + timedelta(seconds=self.prev_val*main.db.status.perm_m_until)
-            self.before = now + timedelta(seconds=self.prev_val*main.db.status.perm_m_before)
+
+            until = self.prev_val - (1.0 - main.db.status.perm_m_until) * sqrt(self.prev_val)
+            before = self.prev_val + (main.db.status.perm_m_before - 1.0) * sqrt(self.prev_val)
+            # print(until, before)
+            self.until = now + timedelta(seconds=until)
+            self.before = now + timedelta(seconds=before)
         elif self.remaining == 0:
             self.pick(main)
 
