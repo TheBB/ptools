@@ -295,7 +295,6 @@ class PermissionProgram(AbstractProgram):
         self.your_turn = True
         self.total_added = 0
         self.prev_val = 0
-        self.max_pts = 0
 
         main.show_message(['You get to pick from {}'.format(num_you),
                            'We get to pick from {}'.format(self.num_our)])
@@ -304,8 +303,8 @@ class PermissionProgram(AbstractProgram):
         self.next(main)
 
     def pick(self, main):
+        pts = main.db.status.perm_value(self.pic)
         if self.your_turn:
-            pts = main.db.status.perm_value(self.pic)
             main.show_message('You pick {} points, our turn'.format(pts))
             self.your_pts = pts
             self.remaining = self.num_our
@@ -313,7 +312,6 @@ class PermissionProgram(AbstractProgram):
             self.picker = self.picker_our
             self.next(main)
         else:
-            pts = self.max_pts
             conf = choice(ascii_lowercase)
             ret = main.show_message(['{} – {}'.format(pts, self.your_pts),
                                      'Permission {}'.format('granted' if self.your_pts > pts else 'denied'),
@@ -333,8 +331,7 @@ class PermissionProgram(AbstractProgram):
 
         if not self.your_turn:
             val = main.db.status.perm_value(self.pic)
-            self.max_pts = max(val, self.max_pts)
-            if self.remaining == 0:
+            if self.remaining == 0 or val >= self.your_pts:
                 self.pick(main)
                 return
             now = datetime.now()
@@ -352,7 +349,6 @@ class PermissionProgram(AbstractProgram):
 
             until = self.prev_val - (1.0 - main.db.status.perm_m_until) * sqrt(self.prev_val)
             before = self.prev_val + (main.db.status.perm_m_before - 1.0) * sqrt(self.prev_val)
-            # print(until, before)
             self.until = now + timedelta(seconds=until)
             self.before = now + timedelta(seconds=before)
         elif self.remaining == 0:
