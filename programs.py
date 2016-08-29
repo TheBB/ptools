@@ -295,6 +295,7 @@ class PermissionProgram(AbstractProgram):
         self.your_turn = True
         self.total_added = 0
         self.prev_val = 0
+        self.your_pts = 0
 
         main.show_message(['You get to pick from {}'.format(num_you),
                            'We get to pick from {}'.format(self.num_our)])
@@ -305,8 +306,7 @@ class PermissionProgram(AbstractProgram):
     def pick(self, main):
         pts = main.db.status.perm_value(self.pic)
         if self.your_turn:
-            main.show_message('You pick {} points, our turn'.format(pts))
-            self.your_pts = pts
+            main.show_message('You pick {} points, our turn'.format(self.your_pts))
             self.remaining = self.num_our
             self.your_turn = False
             self.picker = self.picker_our
@@ -329,8 +329,12 @@ class PermissionProgram(AbstractProgram):
 
         self.remaining -= 1
 
-        if not self.your_turn:
-            val = main.db.status.perm_value(self.pic)
+        val = main.db.status.perm_value(self.pic)
+        if self.your_turn:
+            self.your_pts = max(self.your_pts, val)
+            if self.remaining == 0:
+                self.pick(main)
+        else:
             if self.remaining == 0 or val >= self.your_pts:
                 self.pick(main)
                 return
@@ -351,14 +355,9 @@ class PermissionProgram(AbstractProgram):
             before = self.prev_val + (main.db.status.perm_m_before - 1.0) * sqrt(self.prev_val)
             self.until = now + timedelta(seconds=until)
             self.before = now + timedelta(seconds=before)
-        elif self.remaining == 0:
-            self.pick(main)
 
     def key(self, main, event):
-        if event.key() == Qt.Key_P and self.your_turn:
-            self.pick(main)
-        else:
-            self.next(main)
+        self.next(main)
 
 
 class InfoProgram(AbstractProgram):
