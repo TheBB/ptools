@@ -122,9 +122,10 @@ class Status:
 
     def mas(self, skip=False):
         if self.points < 0:
-            self.points += 1
+            self.points += 2 if skip else 1
             self.last_mas = date.today()
-            return 'One point removed from your lead'
+            return '{} point{} removed from your lead'.format('Two' if skip else 'One',
+                                                              's' if skip else '')
         elif self.points > 0:
             if self.perm_until >= datetime.now():
                 self.points -= 2 if (skip and random() < self.prob_skip_bonus) else 1
