@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta
 from os import listdir, sep
 from os.path import abspath, basename, expanduser, isfile, join
-from random import choice, uniform
+from random import random, choice, uniform
 from subprocess import run, PIPE
 from yaml import dump, load
 
@@ -77,6 +77,7 @@ class Status:
         self.perm_m_until, self.perm_m_before = config['games']['permission']['margins']
         self.perm_ours = db.picker_from_filters(config['games']['permission']['our_picker'])
         self.perm_yours = db.picker_from_filters(config['games']['permission']['your_picker'])
+        self.prob_skip_bonus = float(config['games']['permission']['prob_skip_bonus'])
 
     def update(self):
         msg = None
@@ -119,17 +120,18 @@ class Status:
             dump(data, f, default_flow_style=False)
         run(['rsync', '-av', self.local, self.remote])
 
-    def mas(self):
+    def mas(self, skip=False):
         if self.points < 0:
             self.points += 1
             self.last_mas = date.today()
             return 'One point removed from your lead'
         elif self.points > 0:
             if self.perm_until >= datetime.now():
-                self.points -= 1
+                self.points -= 2 if (skip and random() < self.prob_skip_bonus) else 1
+                self.points = max(self.points, 0)
                 self.perm_until = datetime.now() - timedelta(hours=2)
                 self.last_mas = date.today()
-                return 'You have permission, one point removed from our lead'
+                return 'New lead for us is {}'.format(self.points)
             else:
                 self.points += 1
                 self.ask_blocked_until = datetime.now() + timedelta(hours=1)

@@ -47,6 +47,9 @@ class ShowProgram(AbstractProgram):
         elif event.key() == Qt.Key_M:
             msg = main.db.status.mas()
             main.show_message(msg)
+        elif event.key() == Qt.Key_N:
+            msg = main.db.status.mas(skip=True)
+            main.show_message(msg)
         elif event.key() == Qt.Key_R:
             if main.db.status.can_ask_permission():
                 main.db.status.block_until(main.db.status.perm_break)
