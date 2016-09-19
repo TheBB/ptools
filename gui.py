@@ -17,6 +17,7 @@ class MainWindow(QMainWindow):
         image = ImageView()
         self.setCentralWidget(image)
         self.image = image
+        self.black = False
 
         self.picker_dialog = PickerDialog(self.db)
         self.flags_dialog = FlagsDialog(self.db)
@@ -63,6 +64,13 @@ class MainWindow(QMainWindow):
             return
         if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
             self.close()
+            return
+        if event.key() == Qt.Key_L:
+            if self.black:
+                self.image.load(self.current_pic)
+            else:
+                self.image.load(None)
+            self.black = not self.black
             return
         self.programs[-1].key(self, event)
 

@@ -21,11 +21,14 @@ class ImageView(QLabel):
         self.orig_pixmap = None
 
     def load(self, pic):
-        if isinstance(pic, str):
-            fn = pic
+        if not pic:
+            self.orig_pixmap = QPixmap()
         else:
-            fn = pic.filename
-        self.orig_pixmap = QPixmap(fn)
+            if isinstance(pic, str):
+                fn = pic
+            else:
+                fn = pic.filename
+            self.orig_pixmap = QPixmap(fn)
         self.resize()
 
     def resize(self):
