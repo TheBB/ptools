@@ -77,7 +77,6 @@ class Status:
         self.perm_m_until, self.perm_m_before = config['games']['permission']['margins']
         self.perm_ours = db.picker_from_filters(config['games']['permission']['our_picker'])
         self.perm_yours = db.picker_from_filters(config['games']['permission']['your_picker'])
-        self.prob_skip_bonus = float(config['games']['permission']['prob_skip_bonus'])
 
     def update(self):
         msg = None
@@ -121,24 +120,28 @@ class Status:
         run(['rsync', '-av', self.local, self.remote])
 
     def mas(self, skip=False):
+        pos = 'Undecided.'
+        chg = 0
         if self.points < 0:
-            self.points += 2 if skip else 1
-            self.last_mas = date.today()
-            return '{} point{} removed from your lead'.format('Two' if skip else 'One',
-                                                              's' if skip else '')
+            pos = 'You are leading'
+            chg = 2 if skip else 1
+            self.points += chg
+            self.points = min(self.points, 0)
         elif self.points > 0:
             if self.perm_until >= datetime.now():
-                self.points -= 2 if (skip and random() < self.prob_skip_bonus) else 1
-                self.points = max(self.points, 0)
+                pos = 'You have permission'
+                chg = -1 if skip else 1
                 self.perm_until = datetime.now() - timedelta(hours=2)
                 self.last_mas = date.today()
-                return 'New lead for us is {}'.format(self.points)
             else:
-                self.points += 1
-                self.ask_blocked_until = datetime.now() + timedelta(hours=1)
-                return 'Permission not given, one point added to our lead'
-        else:
-            return 'Undecided position, you should play'
+                pos = "You don't have permission"
+                if not skip:
+                    chg = 2
+                    self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+            self.points += chg
+            self.points = max(self.points, 0)
+        self.last_mas = date.today()
+        return '{}. Delta {:+}. New {}.'.format(pos, chg, self.points)
 
     def picker(self):
         if self.points > 0:
