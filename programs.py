@@ -21,6 +21,12 @@ class AbstractProgram:
     def make_current(self, main, *args, **kwargs):
         pass
 
+    def pause(self, main):
+        pass
+
+    def unpause(self, main):
+        pass
+
 
 class ShowProgram(AbstractProgram):
 
@@ -322,6 +328,18 @@ class PermissionProgram(AbstractProgram):
             else:
                 main.db.status.block_until(main.db.status.perm_break + self.total_added/4)
             main.unregister()
+
+    def pause(self, main):
+        now = datetime.now()
+        if hasattr(self, 'until'):
+            self.delta_until = self.until - now
+            self.delta_before = self.before - now
+
+    def unpause(self, main):
+        now = datetime.now()
+        if hasattr(self, 'delta_until'):
+            self.until = now + self.delta_until
+            self.before = now + self.delta_before
 
     def next(self, main):
         self.pic = self.picker.get()

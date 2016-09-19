@@ -68,8 +68,10 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key_L:
             if self.black:
                 self.image.load(self.current_pic)
+                self.programs[-1].unpause(self)
             else:
                 self.image.load(None)
+                self.programs[-1].pause(self)
             self.black = not self.black
             return
         self.programs[-1].key(self, event)
