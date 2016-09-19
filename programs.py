@@ -50,17 +50,14 @@ class ShowProgram(AbstractProgram):
         elif event.key() == Qt.Key_N:
             msg = main.db.status.mas(skip=True)
             main.show_message(msg)
-        elif event.key() == Qt.Key_R:
-            if main.db.status.can_ask_permission():
+        elif event.key() == Qt.Key_G:
+            if main.db.status.points == 0:
+                BestOfGame(main)
+            if main.db.status.points < 0 or not main.db.status.can_ask_permission():
+                StatusProgram(main)
+            elif main.db.status.can_ask_permission():
                 main.db.status.block_until(main.db.status.perm_break)
                 PermissionProgram(main)
-            else:
-                main.show_message("Can't ask permission")
-        elif event.key() == Qt.Key_G:
-            if main.db.status.points != 0:
-                StatusProgram(main)
-            else:
-                BestOfGame(main)
         else:
             self.pic(main)
 
