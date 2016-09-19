@@ -32,7 +32,10 @@ class ImageView(QLabel):
         self.resize()
 
     def resize(self):
-        pixmap = self.orig_pixmap.scaled(self.width(), self.height(), 1, 1)
+        if not self.orig_pixmap.isNull():
+            pixmap = self.orig_pixmap.scaled(self.width(), self.height(), 1, 1)
+        else:
+            pixmap = self.orig_pixmap
         self.setPixmap(pixmap)
 
     def resizeEvent(self, event):
