@@ -342,6 +342,7 @@ class PermissionProgram(AbstractProgram):
             self.before = now + self.delta_before
 
     def next(self, main):
+        now = datetime.now()
         self.pic = self.picker.get()
         main.show_image(self.pic)
 
@@ -356,7 +357,6 @@ class PermissionProgram(AbstractProgram):
             if self.remaining == 0 or val >= self.your_pts:
                 self.pick(main)
                 return
-            now = datetime.now()
             if hasattr(self, 'until') and now < self.until:
                 add = int(ceil((self.until - now).total_seconds()))
                 print('too soon', add)
