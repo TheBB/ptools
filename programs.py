@@ -115,12 +115,12 @@ class SyncProgram(AbstractProgram):
             self.data['new_rem'] = int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n'))
             self.data['del_rem'] = int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n'))
             main.show_message("""New from remote: {new_loc}<br>
-                                 Deleted remotely: {del_loc}<br>
+                                 Previously deleted remotely: {del_loc}<br>
                                  Deleted from DB: {del_inc}<br>
                                  Deleted locally: {del_loc}<br>
                                  Re-staged: {mov_inc}<br>
                                  New on remote: {new_rem}<br>
-                                 Deleted remotely: {del_rem}""".format(**self.data),
+                                 Newly deleted remotely: {del_rem}""".format(**self.data),
                               align='left')
 
             main.unregister()
