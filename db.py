@@ -166,7 +166,7 @@ class DB:
     def __init__(self, config):
         columns = [Column('id', Integer, primary_key=True),
                    Column('extension', String, nullable=False),
-                   Column('delt', Boolean, nullable=False)]
+                   Column('delt', Boolean, nullable=False, default=False)]
         for c in config['columns']:
             if isinstance(c, str):
                 type_ = Integer if c.startswith('num_') else Boolean
