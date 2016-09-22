@@ -62,6 +62,9 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key_I:
             InfoProgram(self)
             return
+        if event.key() == Qt.Key_D:
+            self.db.mark_delete(self.current_pic)
+            return
         if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
             self.close()
             return

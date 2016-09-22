@@ -165,7 +165,8 @@ class DB:
 
     def __init__(self, config):
         columns = [Column('id', Integer, primary_key=True),
-                   Column('extension', String, nullable=False)]
+                   Column('extension', String, nullable=False),
+                   Column('delt', Boolean, nullable=False)]
         for c in config['columns']:
             if isinstance(c, str):
                 type_ = Integer if c.startswith('num_') else Boolean
@@ -179,7 +180,7 @@ class DB:
             col = Column(key, type_=type_, nullable=False, default=default)
             col.title = name
             columns.append(col)
-        self.custom_columns = columns[2:]
+        self.custom_columns = columns[3:]
 
         self.staging = abspath(expanduser(config['pics']['staging']))
         self.remote = config['pics']['remote']
@@ -227,18 +228,26 @@ class DB:
     def picker(self, name='&All', *filters):
         return ListPicker(name, self, *filters)
 
-    def get(self):
+    def get_remote(self):
         ret = run(['rsync', '-a', '--info=stats2', '--delete',
                    self.remote, Picture.root + sep], stdout=PIPE)
         self.update_session()
         return ret.stdout.decode()
 
-    def put(self):
+    def put_remote(self):
         self.session.commit()
         ret = run(['rsync', '-a', '--info=stats2', '--delete',
                    Picture.root + sep, self.remote], stdout=PIPE)
         self.update_session()
         return ret.stdout.decode()
+
+    def mark_delete(self, pic):
+        if pic.id:
+            pic.delt = True
+            self.session.commit()
+
+    def get_delete_ids(self):
+        return {p.id for p in self.query().filter(Picture.delt == True)}
 
     def delete(self, pic):
         run(['rm', pic.filename])

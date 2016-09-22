@@ -82,7 +82,8 @@ class MessageProgram(AbstractProgram):
 class SyncProgram(AbstractProgram):
 
     def __init__(self, main):
-        ret = main.db.get()
+        self.del_ids = main.db.get_delete_ids()
+        ret = main.db.get_remote()
         ndel, nmov, self.staged = main.db.sync_local()
 
         self.data = {
@@ -90,6 +91,7 @@ class SyncProgram(AbstractProgram):
             'del_loc': int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n')),
             'del_inc': ndel,
             'mov_inc': nmov,
+            'del_loc': len(self.del_ids),
         }
 
         self.moves = {}
@@ -101,18 +103,21 @@ class SyncProgram(AbstractProgram):
             fn = self.staged[-1]
             main.show_image(self.staged[-1])
         else:
+            for pic in main.db.query().filter(Picture.id.in_(self.del_ids)):
+                main.db.delete(pic)
             main.db.session.add_all(self.moves.values())
             main.db.session.commit()
 
             for fn, pic in self.moves.items():
                 run(['mv', fn, pic.filename])
 
-            ret = main.db.put()
+            ret = main.db.put_remote()
             self.data['new_rem'] = int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n'))
             self.data['del_rem'] = int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n'))
             main.show_message("""New from remote: {new_loc}<br>
                                  Deleted remotely: {del_loc}<br>
                                  Deleted from DB: {del_inc}<br>
+                                 Deleted locally: {del_loc}<br>
                                  Re-staged: {mov_inc}<br>
                                  New on remote: {new_rem}<br>
                                  Deleted remotely: {del_rem}""".format(**self.data),
