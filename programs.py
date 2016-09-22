@@ -103,8 +103,9 @@ class SyncProgram(AbstractProgram):
             fn = self.staged[-1]
             main.show_image(self.staged[-1])
         else:
-            for pic in main.db.query().filter(Picture.id.in_(self.del_ids)):
-                main.db.delete(pic)
+            if self.del_ids:
+                for pic in main.db.query().filter(Picture.id.in_(self.del_ids)):
+                    main.db.delete(pic)
             main.db.session.add_all(self.moves.values())
             main.db.session.commit()
 
