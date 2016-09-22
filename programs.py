@@ -59,7 +59,7 @@ class ShowProgram(AbstractProgram):
         elif event.key() == Qt.Key_G:
             if main.db.status.points == 0:
                 BestOfGame(main)
-            if main.db.status.points < 0 or not main.db.status.can_ask_permission():
+            elif main.db.status.points < 0 or not main.db.status.can_ask_permission():
                 StatusProgram(main)
             elif main.db.status.can_ask_permission():
                 main.db.status.block_until(main.db.status.perm_break)
