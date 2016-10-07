@@ -138,6 +138,8 @@ class Status:
                 if not skip:
                     chg = 2
                     self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+                else:
+                    return "That doesn't make sense."
             self.points += chg
             self.points = max(self.points, 0)
         self.last_mas = date.today()
