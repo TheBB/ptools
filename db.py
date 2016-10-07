@@ -108,6 +108,9 @@ class Status:
 
     def update_points_leader(self, leader, points):
         assert leader in {'us', 'you'}
+        if self.leader == leader:
+            points += self.streak * (self.streak + 1) / 2
+            self.streak += 1
         self.leader = leader
         self.points = points
         self.next_mas_add = 0
@@ -158,6 +161,7 @@ class Status:
             if self.perm_until >= datetime.now():
                 pos = 'You have permission'
                 chg = -1 if skip else self.next_mas_add
+                self.next_mas_add += 1
                 self.perm_until = datetime.now() - timedelta(hours=2)
                 self.last_mas = date.today()
             elif not skip:
@@ -166,8 +170,6 @@ class Status:
                 self.ask_blocked_until = datetime.now() + timedelta(hours=1)
             else:
                 return "That doesn't make sense"
-
-            self.next_mas_add += 1
 
         self.update_points(delta=chg)
         return '{}. Delta {:+}. New {}.'.format(pos, chg, self.points)

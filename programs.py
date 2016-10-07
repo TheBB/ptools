@@ -366,8 +366,8 @@ class PermissionProgram(AbstractProgram):
                 self.finish(m)
         else:
             self.our_pts = max(self.our_pts, val)
-            self.prev_val = max(self.prev_val - 1, val)
-            if (self.remaining == 0 and self.prev_val == 1) or val >= self.your_pts:
+            self.prev_val = max(self.prev_val - 1, val, 1)
+            if (self.remaining <= 0 and self.prev_val == 1) or val >= self.your_pts:
                 self.finish(m)
                 return
             if hasattr(self, 'until') and now < self.until:
