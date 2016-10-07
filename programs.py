@@ -263,26 +263,17 @@ class StatusProgram(AbstractProgram):
 
 class PermissionProgram(AbstractProgram):
 
-    def __init__(self, main):
-        self.picker_you = main.db.status.perm_yours
-        self.picker_our = main.db.status.perm_ours
-        num_you = main.db.status.perm_num
-
-        nums = sorted([main.db.status.perm_value(p) for p in self.picker_our.get_all()])
-        max_num = nums[-1]
-
-        # your_cumdist[n] = P(your max > n)
-        nums = sorted([main.db.status.perm_value(p) for p in self.picker_you.get_all()])
-        max_num = max(max_num, nums[-1])
+    @staticmethod
+    def num_our(dist_our, dist_you, num_you, prob):
+        max_num = max(dist_our[-1], dist_you[-1])
         your_cumdist = np.zeros((max_num+1,), dtype=float)
-        for n, g in groupby(nums):
-            your_cumdist[n:] += len(list(g)) / len(nums)
+        for n, g in groupby(dist_you):
+            your_cumdist[n:] += len(list(g)) / len(dist_you)
         your_cumdist = 1.0 - your_cumdist ** num_you
 
-        nums = sorted([main.db.status.perm_value(p) for p in self.picker_our.get_all()])
         our_cumdist = np.zeros((max_num+1,), dtype=float)
-        for n, g in groupby(nums):
-            our_cumdist[n:] += len(list(g)) / len(nums)
+        for n, g in groupby(dist_our):
+            our_cumdist[n:] += len(list(g)) / len(dist_you)
 
         def prob_you(num_our):
             our = our_cumdist.copy() ** num_our
@@ -291,49 +282,64 @@ class PermissionProgram(AbstractProgram):
             return prob
 
         minus, plus = 1, num_you
-        while prob_you(plus) > main.db.status.perm_prob:
+        while prob_you(plus) > prob:
             minus = plus
             plus *= 2
         while plus > minus + 1:
             test = (minus + plus) // 2
-            if prob_you(test) > main.db.status.perm_prob:
+            if prob_you(test) > prob:
                 minus = test
             else:
                 plus = test
 
-        self.num_our = plus
-        self.remaining = num_you
+        return plus
+
+    def __init__(self, main):
+        self.picker_you = main.db.status.perm_yours
+        self.picker_our = main.db.status.perm_ours
+
+        dist_our = sorted([main.db.status.perm_value(p) for p in self.picker_our.get_all()])
+        dist_you = sorted([main.db.status.perm_value(p) for p in self.picker_you.get_all()])
+        self.num_our = PermissionProgram.num_our(dist_our, dist_you,
+                                                 main.db.status.perm_num,
+                                                 main.db.status.perm_prob)
+        self.remaining = main.db.status.perm_num
         self.picker = self.picker_you
         self.your_turn = True
         self.total_added = 0
         self.prev_val = 0
         self.your_pts = 0
+        self.our_pts = 0
 
-        main.show_message(['You get to pick from {}'.format(num_you),
+        main.show_message(['You get to pick from {}'.format(self.remaining),
                            'We get to pick from {}'.format(self.num_our)])
 
         main.register(self)
         self.next(main)
 
-    def pick(self, main):
-        pts = main.db.status.perm_value(self.pic)
+    def finish(self, main):
         if self.your_turn:
+            pts = main.db.status.perm_value(self.pic)
             main.show_message('You pick {} points, our turn'.format(self.your_pts))
             self.remaining = self.num_our
             self.your_turn = False
             self.picker = self.picker_our
             self.next(main)
+            return
+
+        conf = choice(ascii_lowercase)
+        ret = main.show_message([
+            '{} – {}'.format(self.our_pts, self.your_pts),
+            'Permission {}'.format('granted' if self.your_pts > self.our_pts else 'denied'),
+            'Confirm with {}'.format(conf.upper()),
+        ])
+        if conf == ret.lower():
+            main.db.status.give_permission(self.your_pts > self.our_pts,
+                                           reduced=min(55, self.total_added/3))
+            main.db.status.block_until(self.total_added/4)
         else:
-            conf = choice(ascii_lowercase)
-            ret = main.show_message(['{} – {}'.format(pts, self.your_pts),
-                                     'Permission {}'.format('granted' if self.your_pts > pts else 'denied'),
-                                     'Confirm with {}'.format(conf.upper())])
-            if conf == ret.lower():
-                main.db.status.give_permission(self.your_pts > pts, reduced=min(55, self.total_added/3))
-                main.db.status.block_until(self.total_added/4)
-            else:
-                main.db.status.block_until(main.db.status.perm_break + self.total_added/4)
-            main.unregister()
+            main.db.status.block_until(main.db.status.perm_break + self.total_added/4)
+        main.unregister()
 
     def pause(self, main):
         now = datetime.now()
@@ -358,10 +364,11 @@ class PermissionProgram(AbstractProgram):
         if self.your_turn:
             self.your_pts = max(self.your_pts, val)
             if self.remaining == 0:
-                self.pick(main)
+                self.finish(main)
         else:
-            if self.remaining == 0 or val >= self.your_pts:
-                self.pick(main)
+            self.our_pts = max(self.our_pts, val)
+            if (self.remaining == 0 and val == 1) or val >= self.your_pts:
+                self.finish(main)
                 return
             if hasattr(self, 'until') and now < self.until:
                 add = int(ceil((self.until - now).total_seconds()))
