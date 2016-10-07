@@ -110,6 +110,7 @@ class Status:
         assert leader in {'us', 'you'}
         self.leader = leader
         self.points = points
+        self.next_mas_add = 0
 
     def update(self):
         msg = None
@@ -142,7 +143,7 @@ class Status:
     def put(self):
         data = {key: getattr(self, key)
                 for key in ['points', 'leader', 'last_mas', 'last_checkin', 'streak',
-                            'perm_until', 'ask_blocked_until']}
+                            'next_mas_add', 'perm_until', 'ask_blocked_until']}
         with open(self.local, 'w') as f:
             dump(data, f, default_flow_style=False)
         run(['rsync', '-av', self.local, self.remote])
@@ -156,15 +157,17 @@ class Status:
         elif self.we_leading:
             if self.perm_until >= datetime.now():
                 pos = 'You have permission'
-                chg = -1 if skip else 1
+                chg = -1 if skip else self.next_mas_add
                 self.perm_until = datetime.now() - timedelta(hours=2)
                 self.last_mas = date.today()
             elif not skip:
                 pos = "You don't have permission"
-                chg = 4
+                chg = 2 * (self.next_mas_add + 1)
                 self.ask_blocked_until = datetime.now() + timedelta(hours=1)
             else:
                 return "That doesn't make sense"
+
+            self.next_mas_add += 1
 
         self.update_points(delta=chg)
         return '{}. Delta {:+}. New {}.'.format(pos, chg, self.points)
