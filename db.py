@@ -136,7 +136,7 @@ class Status:
             else:
                 pos = "You don't have permission"
                 if not skip:
-                    chg = 2
+                    chg = 4
                     self.ask_blocked_until = datetime.now() + timedelta(hours=1)
                 else:
                     return "That doesn't make sense."
