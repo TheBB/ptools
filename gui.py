@@ -25,6 +25,10 @@ class MainWindow(QMainWindow):
         self.programs = []
         ShowProgram(self)
 
+    @property
+    def st(self):
+        return self.db.status
+
     def register(self, program):
         self.programs.append(program)
 

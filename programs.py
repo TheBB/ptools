@@ -15,76 +15,76 @@ from db import Picture, UnionPicker
 
 class AbstractProgram:
 
-    def key(self, main, event):
+    def key(self, m, event):
         pass
 
-    def make_current(self, main, *args, **kwargs):
+    def make_current(self, m, *args, **kwargs):
         pass
 
-    def pause(self, main):
+    def pause(self, m):
         pass
 
-    def unpause(self, main):
+    def unpause(self, m):
         pass
 
 
 class ShowProgram(AbstractProgram):
 
-    def __init__(self, main):
+    def __init__(self, m):
         self.picker = None
-        main.register(self)
-        self.make_current(main)
+        m.register(self)
+        self.make_current(m)
 
-    def pic(self, main):
-        picker = self.picker or main.db.status.picker()
-        main.show_image(picker.get())
+    def pic(self, m):
+        picker = self.picker or m.st.picker()
+        m.show_image(picker.get())
 
-    def make_current(self, main, *args, **kwargs):
-        self.pic(main)
+    def make_current(self, m, *args, **kwargs):
+        self.pic(m)
 
-    def key(self, main, event):
+    def key(self, m, event):
         if event.key() == Qt.Key_P:
-            self.picker = main.get_picker() or self.picker
-            self.pic(main)
+            self.picker = m.get_picker() or self.picker
+            self.pic(m)
         elif event.key() == Qt.Key_S:
-            SyncProgram(main)
+            SyncProgram(m)
         elif event.key() == Qt.Key_T:
-            StatusProgram(main)
+            StatusProgram(m)
         elif event.key() == Qt.Key_M:
-            msg = main.db.status.mas()
-            main.show_message(msg)
+            msg = m.st.mas()
+            m.show_message(msg)
         elif event.key() == Qt.Key_N:
-            msg = main.db.status.mas(skip=True)
-            main.show_message(msg)
+            msg = m.st.mas(skip=True)
+            m.show_message(msg)
         elif event.key() == Qt.Key_G:
-            if main.db.status.points == 0:
-                BestOfGame(main)
-            elif main.db.status.points < 0 or not main.db.status.can_ask_permission():
-                StatusProgram(main)
-            elif main.db.status.can_ask_permission():
-                main.db.status.block_until(main.db.status.perm_break)
-                PermissionProgram(main)
+            if m.st.pts == 0:
+                BestOfGame(m)
+            elif m.st.you_leading or not m.st.can_ask_permission():
+                StatusProgram(m)
+            elif m.st.can_ask_permission():
+                m.st.block_until(m.st.perm_break)
+                PermissionProgram(m)
         else:
-            self.pic(main)
+            self.pic(m)
 
 
 class MessageProgram(AbstractProgram):
 
-    def __init__(self, main, text):
+    def __init__(self, m, text):
         self.text = text
-        main.register(self)
+        m.register(self)
 
-    def key(self, main, event):
-        main.show_message(self.text)
-        main.unregister()
+    def key(self, m, event):
+        m.show_message(self.text)
+        m.unregister()
 
 
 class SyncProgram(AbstractProgram):
 
-    def __init__(self, main):
-        self.del_ids = main.db.get_delete_ids()
-        ret = main.db.get_remote()
-        ndel, nmov, self.staged = main.db.sync_local()
+    def __init__(self, m):
+        self.del_ids = m.db.get_delete_ids()
+        ret = m.db.get_remote()
+        ndel, nmov, self.staged = m.db.sync_local()
 
         self.data = {
             'new_loc': int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n')),
@@ -95,27 +95,27 @@ class SyncProgram(AbstractProgram):
         }
 
         self.moves = {}
-        main.register(self)
-        self.next(main)
+        m.register(self)
+        self.next(m)
 
-    def next(self, main):
+    def next(self, m):
         if self.staged:
             fn = self.staged[-1]
-            main.show_image(self.staged[-1])
+            m.show_image(self.staged[-1])
         else:
             if self.del_ids:
-                for pic in main.db.query().filter(Picture.id.in_(self.del_ids)):
-                    main.db.delete(pic)
-            main.db.session.add_all(self.moves.values())
-            main.db.session.commit()
+                for pic in m.db.query().filter(Picture.id.in_(self.del_ids)):
+                    m.db.delete(pic)
+            m.db.session.add_all(self.moves.values())
+            m.db.session.commit()
 
             for fn, pic in self.moves.items():
                 run(['mv', fn, pic.filename])
 
-            ret = main.db.put_remote()
+            ret = m.db.put_remote()
             self.data['new_rem'] = int(re.search(r'Number of created files: (?P<n>\d+)', ret).group('n'))
             self.data['del_rem'] = int(re.search(r'Number of deleted files: (?P<n>\d+)', ret).group('n'))
-            main.show_message("""New from remote: {new_loc}<br>
+            m.show_message("""New from remote: {new_loc}<br>
                                  Previously deleted remotely: {del_loc}<br>
                                  Deleted from DB: {del_inc}<br>
                                  Deleted locally: {del_loc}<br>
@@ -124,10 +124,10 @@ class SyncProgram(AbstractProgram):
                                  Newly deleted remotely: {del_rem}""".format(**self.data),
                               align='left')
 
-            main.unregister()
+            m.unregister()
 
-    def key(self, main, event):
-        flags = main.get_flags()
+    def key(self, m, event):
+        flags = m.get_flags()
         if flags:
             fn = self.staged.pop()
             extension = fn.split('.')[-1].lower()
@@ -140,13 +140,13 @@ class SyncProgram(AbstractProgram):
                 setattr(pic, k, v)
 
             self.moves[fn] = pic
-            self.next(main)
+            self.next(m)
 
 
 class BestOfGame(ShowProgram):
 
-    def __init__(self, main):
-        self.picker = main.db.status.bestof_picker
+    def __init__(self, m):
+        self.picker = m.st.bestof_picker
 
         self.pts = {True: [0, 0, 0], False: [0, 0, 0]}
         self.max_pts = [5, 5, 10]
@@ -156,10 +156,10 @@ class BestOfGame(ShowProgram):
         self.bias = 0.0
         self.done = False
 
-        main.show_message('Best of: ' + ', '.join(str(s) for s in self.max_pts))
+        m.show_message('Best of: ' + ', '.join(str(s) for s in self.max_pts))
 
-        main.register(self)
-        self.next(main)
+        m.register(self)
+        self.next(m)
 
     def add_pts(self, winner, npts):
         l_pts = self.pts[not winner]
@@ -175,9 +175,9 @@ class BestOfGame(ShowProgram):
                 i += 1
             npts -= 1
 
-    def next(self, main):
+    def next(self, m):
         if self.done:
-            main.unregister()
+            m.unregister()
             return
 
         p = lambda b: max(min((1.020**b) / (1.020**b + 1), 0.93), 0.07)
@@ -185,15 +185,15 @@ class BestOfGame(ShowProgram):
         threshold = conv(p(self.bias) if self.current else 1 - p(self.bias))
         win = random() <= threshold
         pic = self.picker.get()
-        while main.db.status.bestof_trigger(pic) != win:
+        while m.st.bestof_trigger(pic) != win:
             pic = self.picker.get()
-        main.show_image(pic)
+        m.show_image(pic)
 
         if not win:
             self.current = not self.current
             return
 
-        npts = main.db.status.bestof_value(pic)
+        npts = m.st.bestof_value(pic)
         self.add_pts(self.current, npts)
         sign = 2 * int(self.current) - 1
 
@@ -206,9 +206,9 @@ class BestOfGame(ShowProgram):
             winner = 'We' if self.current else 'You'
             total = self.max_pts[-1] - self.pts[not self.current][-1]
             msg = '{} win with {}'.format(winner, total)
-            MessageProgram(main, msg)
+            MessageProgram(m, msg)
             self.done = True
-            main.db.status.set_pts(sign * total)
+            m.st.update_points_leader('us' if self.current else 'you', total)
             return
 
         msg = ['{} points for {}'.format(npts, 'us' if self.current else 'you')]
@@ -224,41 +224,40 @@ class BestOfGame(ShowProgram):
         p_f = 1 - p_t
 
         msg.append('{:.2f}% – {:.2f}%'.format(p_t*100, p_f*100))
-        MessageProgram(main, msg)
+        MessageProgram(m, msg)
 
         self.prev_winner = self.current
 
-    def make_current(self, main, *args, **kwargs):
-        self.next(main)
+    def make_current(self, m, *args, **kwargs):
+        self.next(m)
 
-    def key(self, main, event):
-        self.next(main)
+    def key(self, m, event):
+        self.next(m)
 
 
 class StatusProgram(AbstractProgram):
 
-    def __init__(self, main):
-        main.register(self)
-        pts = main.db.status.points
-        if pts == 0:
-            main.show_message('Undecided')
+    def __init__(self, m):
+        m.register(self)
+        if m.st.pts == 0:
+            m.show_message('Undecided')
         else:
-            leader = 'our' if pts > 0 else 'your'
-            msg = ['{} points in {} favour'.format(abs(pts), leader)]
-            if main.db.status.points > 0:
-                if main.db.status.perm_until > datetime.now():
-                    diff = main.db.status.perm_until - datetime.now()
+            leader = 'our' if m.st.we_leading else 'your'
+            msg = ['{} points in {} favour'.format(m.st.pts, leader)]
+            if m.st.we_leading:
+                if m.st.perm_until > datetime.now():
+                    diff = m.st.perm_until - datetime.now()
                     msg.append('Permission for {} minutes'.format(diff.seconds//60))
                 else:
-                    if main.db.status.ask_blocked_until > datetime.now():
-                        diff = main.db.status.ask_blocked_until - datetime.now()
+                    if m.st.ask_blocked_until > datetime.now():
+                        diff = m.st.ask_blocked_until - datetime.now()
                         msg.append('Can ask permission in {} minutes'.format(diff.seconds//60 + 1))
                     else:
                         msg.append('Can ask permission')
-            main.show_message(msg)
+            m.show_message(msg)
 
-    def key(self, main, event):
-        main.unregister()
+    def key(self, m, event):
+        m.unregister()
 
 
 class PermissionProgram(AbstractProgram):
@@ -294,16 +293,16 @@ class PermissionProgram(AbstractProgram):
 
         return plus
 
-    def __init__(self, main):
-        self.picker_you = main.db.status.perm_yours
-        self.picker_our = main.db.status.perm_ours
+    def __init__(self, m):
+        self.picker_you = m.st.perm_yours
+        self.picker_our = m.st.perm_ours
 
-        dist_our = sorted([main.db.status.perm_value(p) for p in self.picker_our.get_all()])
-        dist_you = sorted([main.db.status.perm_value(p) for p in self.picker_you.get_all()])
+        dist_our = sorted([m.st.perm_value(p) for p in self.picker_our.get_all()])
+        dist_you = sorted([m.st.perm_value(p) for p in self.picker_you.get_all()])
         self.num_our = PermissionProgram.num_our(dist_our, dist_you,
-                                                 main.db.status.perm_num,
-                                                 main.db.status.perm_prob)
-        self.remaining = main.db.status.perm_num
+                                                 m.st.perm_num,
+                                                 m.st.perm_prob)
+        self.remaining = m.st.perm_num
         self.picker = self.picker_you
         self.your_turn = True
         self.total_added = 0
@@ -311,64 +310,65 @@ class PermissionProgram(AbstractProgram):
         self.your_pts = 0
         self.our_pts = 0
 
-        main.show_message(['You get to pick from {}'.format(self.remaining),
+        m.show_message(['You get to pick from {}'.format(self.remaining),
                            'We get to pick from {}'.format(self.num_our)])
 
-        main.register(self)
-        self.next(main)
+        m.register(self)
+        self.next(m)
 
-    def finish(self, main):
+    def finish(self, m):
         if self.your_turn:
-            pts = main.db.status.perm_value(self.pic)
-            main.show_message('You pick {} points, our turn'.format(self.your_pts))
+            pts = m.st.perm_value(self.pic)
+            m.show_message('You pick {} points, our turn'.format(self.your_pts))
             self.remaining = self.num_our
             self.your_turn = False
             self.picker = self.picker_our
-            self.next(main)
+            self.next(m)
             return
 
         conf = choice(ascii_lowercase)
-        ret = main.show_message([
+        ret = m.show_message([
             '{} – {}'.format(self.our_pts, self.your_pts),
             'Permission {}'.format('granted' if self.your_pts > self.our_pts else 'denied'),
             'Confirm with {}'.format(conf.upper()),
         ])
         if conf == ret.lower():
-            main.db.status.give_permission(self.your_pts > self.our_pts,
+            m.st.give_permission(self.your_pts > self.our_pts,
                                            reduced=min(55, self.total_added/3))
-            main.db.status.block_until(self.total_added/4)
+            m.st.block_until(self.total_added/4)
         else:
-            main.db.status.block_until(main.db.status.perm_break + self.total_added/4)
-        main.unregister()
+            m.st.block_until(m.st.perm_break + self.total_added/4)
+        m.unregister()
 
-    def pause(self, main):
+    def pause(self, m):
         now = datetime.now()
         if hasattr(self, 'until'):
             self.delta_until = self.until - now
             self.delta_before = self.before - now
 
-    def unpause(self, main):
+    def unpause(self, m):
         now = datetime.now()
         if hasattr(self, 'delta_until'):
             self.until = now + self.delta_until
             self.before = now + self.delta_before
 
-    def next(self, main):
+    def next(self, m):
         now = datetime.now()
         self.pic = self.picker.get()
-        main.show_image(self.pic)
+        m.show_image(self.pic)
 
         self.remaining -= 1
 
-        val = main.db.status.perm_value(self.pic)
+        val = m.st.perm_value(self.pic)
         if self.your_turn:
             self.your_pts = max(self.your_pts, val)
             if self.remaining == 0:
-                self.finish(main)
+                self.finish(m)
         else:
             self.our_pts = max(self.our_pts, val)
-            if (self.remaining == 0 and val == 1) or val >= self.your_pts:
-                self.finish(main)
+            self.prev_val = max(self.prev_val - 1, val)
+            if (self.remaining == 0 and self.prev_val == 1) or val >= self.your_pts:
+                self.finish(m)
                 return
             if hasattr(self, 'until') and now < self.until:
                 add = int(ceil((self.until - now).total_seconds()))
@@ -380,24 +380,23 @@ class PermissionProgram(AbstractProgram):
                 print('too late', add)
                 self.remaining += add
                 self.total_added += add
-            self.prev_val = max(self.prev_val - 1, val)
 
-            until = self.prev_val - (1.0 - main.db.status.perm_m_until) * sqrt(self.prev_val)
-            before = self.prev_val + (main.db.status.perm_m_before - 1.0) * sqrt(self.prev_val)
+            until = self.prev_val - (1.0 - m.st.perm_m_until) * sqrt(self.prev_val)
+            before = self.prev_val + (m.st.perm_m_before - 1.0) * sqrt(self.prev_val)
             self.until = now + timedelta(seconds=until)
             self.before = now + timedelta(seconds=before)
 
-    def key(self, main, event):
-        self.next(main)
+    def key(self, m, event):
+        self.next(m)
 
 
 class InfoProgram(AbstractProgram):
 
-    def __init__(self, main):
-        main.register(self)
-        pic = main.current_pic
+    def __init__(self, m):
+        m.register(self)
+        pic = m.current_pic
         message = ['ID: {}'.format(pic.id)]
-        main.show_message(message)
+        m.show_message(message)
 
-    def key(self, main, event):
-        main.unregister()
+    def key(self, m, event):
+        m.unregister()

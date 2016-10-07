@@ -78,19 +78,51 @@ class Status:
         self.perm_ours = db.picker_from_filters(config['games']['permission']['our_picker'])
         self.perm_yours = db.picker_from_filters(config['games']['permission']['your_picker'])
 
+    @property
+    def pts(self):
+        return self.points
+
+    @property
+    def signed_pts(self):
+        return -self.pts if self.leader == 'you' else self.pts
+
+    @property
+    def we_leading(self):
+        return self.leader == 'us'
+
+    @property
+    def you_leading(self):
+        return self.leader == 'you'
+
+    def update_points(self, new=None, delta=None, sdelta=None):
+        if new is not None:
+            self.points = new
+            return
+        if delta is not None:
+            self.points += delta
+            self.points = max(self.points, 0)
+            return
+        sdelta = -sdelta if self.you_leading else sdelta
+        self.points += sdelta
+        self.points = max(self.points, 0)
+
+    def update_points_leader(self, leader, points):
+        assert leader in {'us', 'you'}
+        self.leader = leader
+        self.points = points
+
     def update(self):
         msg = None
 
         today = date.today()
         ndays = (today - self.last_checkin).days - 1
         if ndays > 0:
-            if self.points < 0:
-                new_pts = min(self.points + 2 * ndays, 0)
+            if self.you_leading:
+                self.update_points(sdelta=2*ndays)
             else:
-                new_pts = self.points + ndays
+                self.update_points(sdelta=ndays)
             if new_pts != self.points:
-                msg = 'Added {} points for missing days'.format(new_pts - self.points)
-                self.points = new_pts
+                msg = 'Added up to {} points for missing days'.format(ndays)
 
         self.last_checkin = today
         return msg
@@ -105,62 +137,40 @@ class Status:
         self.ask_blocked_until = datetime.now() + timedelta(minutes=delta)
 
     def can_ask_permission(self):
-        if self.points <= 0:
-            return False
-        if datetime.now() < self.ask_blocked_until:
-            return False
-        return True
+        return self.we_leading and datetime.now() > self.ask_blocked_until
 
     def put(self):
         data = {key: getattr(self, key)
-                for key in ['points', 'last_mas', 'last_checkin', 'streak',
+                for key in ['points', 'leader', 'last_mas', 'last_checkin', 'streak',
                             'perm_until', 'ask_blocked_until']}
         with open(self.local, 'w') as f:
             dump(data, f, default_flow_style=False)
         run(['rsync', '-av', self.local, self.remote])
 
     def mas(self, skip=False):
-        pos = 'Undecided.'
         chg = 0
-        if self.points < 0:
+
+        if self.you_leading and self.points > 0:
             pos = 'You are leading'
-            chg = 2 if skip else 1
-            self.points += chg
-            self.points = min(self.points, 0)
-        elif self.points > 0:
+            chg = -2 if skip else -1
+        elif self.we_leading:
             if self.perm_until >= datetime.now():
                 pos = 'You have permission'
                 chg = -1 if skip else 1
                 self.perm_until = datetime.now() - timedelta(hours=2)
                 self.last_mas = date.today()
-            else:
+            elif not skip:
                 pos = "You don't have permission"
-                if not skip:
-                    chg = 4
-                    self.ask_blocked_until = datetime.now() + timedelta(hours=1)
-                else:
-                    return "That doesn't make sense."
-            self.points += chg
-            self.points = max(self.points, 0)
-        self.last_mas = date.today()
+                chg = 4
+                self.ask_blocked_until = datetime.now() + timedelta(hours=1)
+            else:
+                return "That doesn't make sense"
+
+        self.update_points(delta=chg)
         return '{}. Delta {:+}. New {}.'.format(pos, chg, self.points)
 
     def picker(self):
-        if self.points > 0:
-            return self.pickers['plus']
-        elif self.points < 0:
-            return self.pickers['minus']
-        return self.pickers['standard']
-
-    def set_pts(self, pts):
-        sign = -1 if pts < 0 else 1
-        if sign * self.streak > 0:
-            s = abs(self.streak)
-            pts += sign * s * (s + 1) // 2
-            self.streak += sign
-        else:
-            self.streak = sign
-        self.points = pts
+        return self.pickers['plus'] if self.we_leading else self.pickers['minus']
 
 
 class DB:
