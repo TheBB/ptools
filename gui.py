@@ -63,15 +63,6 @@ class MainWindow(QMainWindow):
         return timer
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_I:
-            InfoProgram(self)
-            return
-        if event.key() == Qt.Key_D:
-            self.db.mark_delete(self.current_pic)
-            return
-        if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
-            self.close()
-            return
         if event.key() == Qt.Key_L:
             if self.black:
                 self.image.load(self.current_pic)
@@ -80,6 +71,20 @@ class MainWindow(QMainWindow):
                 self.image.load(None)
                 self.programs[-1].pause(self)
             self.black = not self.black
+            return
+
+        if event.key() == Qt.Key_Q or event.key() == Qt.Key_Escape:
+            self.close()
+            return
+
+        if self.black:
+            return
+
+        if event.key() == Qt.Key_I:
+            InfoProgram(self)
+            return
+        if event.key() == Qt.Key_D:
+            self.db.mark_delete(self.current_pic)
             return
         self.programs[-1].key(self, event)
 
