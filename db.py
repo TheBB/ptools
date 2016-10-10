@@ -161,7 +161,8 @@ class Status:
             if self.perm_until >= datetime.now():
                 pos = 'You have permission'
                 chg = -1 if skip else self.next_mas_add
-                self.next_mas_add += 1
+                if not skip:
+                    self.next_mas_add += 1
                 self.perm_until = datetime.now() - timedelta(hours=2)
                 self.last_mas = date.today()
             elif not skip:
