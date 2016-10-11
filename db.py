@@ -111,6 +111,8 @@ class Status:
         if self.leader == leader:
             points += self.streak * (self.streak + 1) / 2
             self.streak += 1
+        else:
+            self.streak = 0
         self.leader = leader
         self.points = points
         self.next_mas_add = 0
